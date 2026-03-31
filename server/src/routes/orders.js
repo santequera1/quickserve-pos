@@ -33,6 +33,7 @@ function formatOrder(db, order) {
     createdAt: order.created_at,
     driverId: order.driver_id || undefined,
     receiptImage: order.receipt_image || undefined,
+    notes: order.notes || '',
   };
 }
 
@@ -181,6 +182,36 @@ router.patch('/:id/receipt', (req, res) => {
   const updated = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
   const formatted = formatOrder(db, updated);
   res.json(formatted);
+});
+
+// Update notes
+router.patch('/:id/notes', (req, res) => {
+  const { notes } = req.body;
+  const db = getDb();
+  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
+  if (!order) return res.status(404).json({ error: 'Pedido no encontrado' });
+
+  db.prepare('UPDATE orders SET notes = ? WHERE id = ?').run(notes || '', req.params.id);
+
+  const updated = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
+  const formatted = formatOrder(db, updated);
+  res.json(formatted);
+});
+
+// Delete order
+router.delete('/:id', (req, res) => {
+  const db = getDb();
+  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
+  if (!order) return res.status(404).json({ error: 'Pedido no encontrado' });
+
+  db.prepare('DELETE FROM order_items WHERE order_id = ?').run(req.params.id);
+  db.prepare('DELETE FROM orders WHERE id = ?').run(req.params.id);
+
+  if (req.app.io) {
+    req.app.io.emit('order:deleted', { id: Number(req.params.id) });
+  }
+
+  res.json({ success: true });
 });
 
 module.exports = router;

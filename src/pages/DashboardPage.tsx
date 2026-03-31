@@ -60,7 +60,7 @@ const DashboardPage = () => {
   const kpis = [
     { label: 'Ventas', value: formatPrice(todaySales), sub: plural(completedOrders.length, 'pedido'), icon: DollarSign, color: 'text-success' },
     { label: 'Pedidos activos', value: activeOrders.length.toString(), sub: plural(urgentOrders, 'pendiente'), icon: Package, color: 'text-info' },
-    { label: 'Ticket promedio', value: formatPrice(avgTicket), sub: 'por pedido', icon: BarChart3, color: 'text-primary' },
+    { label: 'Venta promedio', value: formatPrice(avgTicket), sub: 'por pedido', icon: BarChart3, color: 'text-primary' },
     { label: 'Más vendido', value: topProduct?.[0] || '-', sub: `x${topProduct?.[1] || 0}`, icon: Star, color: 'text-warning' },
   ];
 

@@ -87,13 +87,13 @@ const OrdersPage = () => {
     return role === 'domiciliario' && d.available;
   });
 
-  // Daily summary (for today filter)
-  const todayStr = getColombiaTodayStr();
-  const dailyOrders = orders.filter(o => getOrderDateStr(o.createdAt) === todayStr && o.status !== 'cancelled');
-  const dailySales = dailyOrders.reduce((sum, o) => sum + o.total, 0);
-  const dailyDelivery = dailyOrders.filter(o => o.type === 'delivery').length;
-  const dailyLocal = dailyOrders.filter(o => o.type !== 'delivery').length;
-  const dailyAvgTicket = dailyOrders.length > 0 ? Math.round(dailySales / dailyOrders.length) : 0;
+  // Summary based on current filtered orders
+  const summaryOrders = filtered.filter(o => o.status !== 'cancelled');
+  const summarySales = summaryOrders.reduce((sum, o) => sum + o.total, 0);
+  const summaryDelivery = summaryOrders.filter(o => o.type === 'delivery').length;
+  const summaryPickup = summaryOrders.filter(o => o.type === 'pickup').length;
+  const summaryDineIn = summaryOrders.filter(o => o.type === 'dine-in').length;
+  const summaryAvg = summaryOrders.length > 0 ? Math.round(summarySales / summaryOrders.length) : 0;
 
   // Bulk selection handlers
   const toggleSelectOrder = (orderId: number) => {
@@ -171,27 +171,25 @@ const OrdersPage = () => {
         </div>
       )}
 
-      {/* Daily summary (only when viewing today) */}
-      {dateFilter === 'today' && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <div className="bg-card rounded-lg border border-border p-3">
-            <p className="text-[10px] text-muted-foreground font-semibold mb-1">💰 Ventas hoy</p>
-            <p className="font-display font-bold text-lg text-primary">{formatPrice(dailySales)}</p>
-          </div>
-          <div className="bg-card rounded-lg border border-border p-3">
-            <p className="text-[10px] text-muted-foreground font-semibold mb-1">📦 Pedidos</p>
-            <p className="font-display font-bold text-lg">{dailyOrders.length}</p>
-          </div>
-          <div className="bg-card rounded-lg border border-border p-3">
-            <p className="text-[10px] text-muted-foreground font-semibold mb-1">🏠 Domicilio / Local</p>
-            <p className="font-display font-bold text-lg">{dailyDelivery} / {dailyLocal}</p>
-          </div>
-          <div className="bg-card rounded-lg border border-border p-3">
-            <p className="text-[10px] text-muted-foreground font-semibold mb-1">🎫 Ticket prom.</p>
-            <p className="font-display font-bold text-lg">{formatPrice(dailyAvgTicket)}</p>
-          </div>
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="bg-card rounded-lg border border-border p-3">
+          <p className="text-[10px] text-muted-foreground font-semibold mb-1">💰 Ventas</p>
+          <p className="font-display font-bold text-lg text-primary">{formatPrice(summarySales)}</p>
         </div>
-      )}
+        <div className="bg-card rounded-lg border border-border p-3">
+          <p className="text-[10px] text-muted-foreground font-semibold mb-1">📦 Pedidos</p>
+          <p className="font-display font-bold text-lg">{summaryOrders.length}</p>
+        </div>
+        <div className="bg-card rounded-lg border border-border p-3">
+          <p className="text-[10px] text-muted-foreground font-semibold mb-1">🏠 Dom. / 🛍️ Rec. / 🍽️ Rest.</p>
+          <p className="font-display font-bold text-lg">{summaryDelivery} / {summaryPickup} / {summaryDineIn}</p>
+        </div>
+        <div className="bg-card rounded-lg border border-border p-3">
+          <p className="text-[10px] text-muted-foreground font-semibold mb-1">📊 Venta promedio</p>
+          <p className="font-display font-bold text-lg">{formatPrice(summaryAvg)}</p>
+        </div>
+      </div>
 
       {/* Quick stats bar */}
       <div className="flex gap-3 text-xs">
@@ -263,19 +261,25 @@ const OrdersPage = () => {
 
       {/* Bulk actions bar */}
       {selectedOrders.size > 0 && (
-        <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <CheckSquare2 size={18} className="text-primary" />
-            <span className="text-sm font-semibold text-primary">{selectedOrders.size} pedido(s) seleccionado(s)</span>
+        <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CheckSquare2 size={18} className="text-primary" />
+              <span className="text-sm font-semibold text-primary">{selectedOrders.size} seleccionado(s)</span>
+            </div>
+            <button onClick={() => setSelectedOrders(new Set())}
+              className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold hover:bg-muted">
+              Cancelar
+            </button>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <div className="relative">
               <button onClick={() => setShowBulkStatusPicker(!showBulkStatusPicker)}
                 className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90">
                 Cambiar estado
               </button>
               {showBulkStatusPicker && (
-                <div className="absolute top-full right-0 mt-1 bg-card border border-border rounded-lg shadow-elevated p-2 z-40 min-w-max">
+                <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-elevated p-2 z-40 w-40">
                   {([
                     { status: 'pending' as OrderStatus, label: '🟡 Pendiente' },
                     { status: 'preparing' as OrderStatus, label: '🔵 Preparando' },
@@ -295,10 +299,6 @@ const OrdersPage = () => {
             <button onClick={handleBulkDelete}
               className="px-3 py-1.5 rounded-lg bg-destructive/20 text-destructive text-xs font-semibold hover:bg-destructive/30 flex items-center gap-1">
               <Trash2 size={14} /> Eliminar
-            </button>
-            <button onClick={() => setSelectedOrders(new Set())}
-              className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold hover:bg-muted">
-              Cancelar
             </button>
           </div>
         </div>
@@ -456,14 +456,6 @@ const OrderListItem = ({ order, navigate, updateOrderStatus, drivers, onAssignDr
             <button onClick={() => onDelete(order.id)}
               className="px-3 py-1.5 rounded-lg text-xs font-medium border border-destructive/30 text-destructive hover:bg-destructive/10 flex items-center gap-1">
               <Trash2 size={12} /> Eliminar
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-              Ver / Editar
             </button>
           </div>
         </div>

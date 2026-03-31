@@ -104,6 +104,13 @@ function migrateSchema() {
     db.exec("ALTER TABLE orders ADD COLUMN receipt_image TEXT");
     console.log('✅ Added receipt_image column to orders');
   }
+  // Add notes column if it doesn't exist
+  try {
+    db.prepare("SELECT notes FROM orders LIMIT 1").get();
+  } catch {
+    db.exec("ALTER TABLE orders ADD COLUMN notes TEXT DEFAULT ''");
+    console.log('✅ Added notes column to orders');
+  }
 }
 
 function seedIfEmpty() {
