@@ -82,6 +82,8 @@ export const api = {
     request<any>(`/orders/${id}/notes`, { method: 'PATCH', body: JSON.stringify({ notes }) }),
   assignDriver: (orderId: number, driverId: number) =>
     request<any>(`/orders/${orderId}/driver`, { method: 'PATCH', body: JSON.stringify({ driverId }) }),
+  deleteOrder: (id: number) =>
+    request<any>(`/orders/${id}`, { method: 'DELETE' }),
 
   // Drivers
   getDrivers: () => request<any[]>('/drivers'),

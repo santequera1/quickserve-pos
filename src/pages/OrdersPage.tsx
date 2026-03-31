@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, LayoutGrid, List, Columns, Truck, Plus, Calendar } from 'lucide-react';
+import { Search, LayoutGrid, List, Columns, Truck, Plus, Calendar, Trash2, CheckSquare2 } from 'lucide-react';
 import { useStore, type OrderStatus, type OrderType, type Driver } from '@/store/useStore';
 import { StatusBadge } from '@/components/StatusBadge';
 import { OrderTypeBadge } from '@/components/OrderTypeBadge';
@@ -25,7 +25,7 @@ type ViewMode = 'list' | 'cards' | 'compact';
 
 const OrdersPage = () => {
   const navigate = useNavigate();
-  const { orders, updateOrderStatus, drivers, assignDriver, tableCount } = useStore();
+  const { orders, updateOrderStatus, drivers, assignDriver, tableCount, deleteOrder, deleteOrders, updateOrdersStatus } = useStore();
   const [activeTab, setActiveTab] = useState<OrderStatus | 'all'>('all');
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
@@ -34,6 +34,8 @@ const OrdersPage = () => {
   const [dateFilter, setDateFilter] = useState<'today' | 'yesterday' | 'week' | 'month' | 'all' | 'custom'>('today');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
+  const [selectedOrders, setSelectedOrders] = useState<Set<number>>(new Set());
+  const [showBulkStatusPicker, setShowBulkStatusPicker] = useState(false);
 
   const filtered = useMemo(() => {
     const todayStr = getColombiaTodayStr();
@@ -92,6 +94,40 @@ const OrdersPage = () => {
   const dailyDelivery = dailyOrders.filter(o => o.type === 'delivery').length;
   const dailyLocal = dailyOrders.filter(o => o.type !== 'delivery').length;
   const dailyAvgTicket = dailyOrders.length > 0 ? Math.round(dailySales / dailyOrders.length) : 0;
+
+  // Bulk selection handlers
+  const toggleSelectOrder = (orderId: number) => {
+    const newSelected = new Set(selectedOrders);
+    if (newSelected.has(orderId)) {
+      newSelected.delete(orderId);
+    } else {
+      newSelected.add(orderId);
+    }
+    setSelectedOrders(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedOrders.size === filtered.length) {
+      setSelectedOrders(new Set());
+    } else {
+      setSelectedOrders(new Set(filtered.map(o => o.id)));
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedOrders.size === 0) return;
+    if (window.confirm(`¿Eliminar ${selectedOrders.size} pedido(s)? Esta acción no se puede deshacer.`)) {
+      deleteOrders(Array.from(selectedOrders));
+      setSelectedOrders(new Set());
+    }
+  };
+
+  const handleBulkStatusChange = (status: OrderStatus) => {
+    if (selectedOrders.size === 0) return;
+    updateOrdersStatus(Array.from(selectedOrders), status);
+    setSelectedOrders(new Set());
+    setShowBulkStatusPicker(false);
+  };
 
   return (
     <div className="space-y-4">
@@ -225,6 +261,49 @@ const OrdersPage = () => {
         })}
       </div>
 
+      {/* Bulk actions bar */}
+      {selectedOrders.size > 0 && (
+        <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <CheckSquare2 size={18} className="text-primary" />
+            <span className="text-sm font-semibold text-primary">{selectedOrders.size} pedido(s) seleccionado(s)</span>
+          </div>
+          <div className="flex gap-2">
+            <div className="relative">
+              <button onClick={() => setShowBulkStatusPicker(!showBulkStatusPicker)}
+                className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90">
+                Cambiar estado
+              </button>
+              {showBulkStatusPicker && (
+                <div className="absolute top-full right-0 mt-1 bg-card border border-border rounded-lg shadow-elevated p-2 z-40 min-w-max">
+                  {([
+                    { status: 'pending' as OrderStatus, label: '🟡 Pendiente' },
+                    { status: 'preparing' as OrderStatus, label: '🔵 Preparando' },
+                    { status: 'ready' as OrderStatus, label: '🟢 Listo' },
+                    { status: 'shipped' as OrderStatus, label: '🛵 Enviado' },
+                    { status: 'delivered' as OrderStatus, label: '✅ Entregado' },
+                    { status: 'cancelled' as OrderStatus, label: '❌ Cancelado' },
+                  ]).map(s => (
+                    <button key={s.status} onClick={() => handleBulkStatusChange(s.status)}
+                      className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted rounded transition-colors">
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button onClick={handleBulkDelete}
+              className="px-3 py-1.5 rounded-lg bg-destructive/20 text-destructive text-xs font-semibold hover:bg-destructive/30 flex items-center gap-1">
+              <Trash2 size={14} /> Eliminar
+            </button>
+            <button onClick={() => setSelectedOrders(new Set())}
+              className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold hover:bg-muted">
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Orders */}
       {filtered.length === 0 ? (
         <div className="text-center py-12">
@@ -235,19 +314,29 @@ const OrdersPage = () => {
         <div className="space-y-2">
           {filtered.map(order => <OrderListItem key={order.id} order={order} navigate={navigate}
             updateOrderStatus={updateOrderStatus}
-            drivers={drivers} onAssignDriver={() => setShowDriverModal(order.id)} />)}
+            drivers={drivers} onAssignDriver={() => setShowDriverModal(order.id)}
+            isSelected={selectedOrders.has(order.id)}
+            onSelect={toggleSelectOrder}
+            onDelete={deleteOrder} />)}
         </div>
       ) : viewMode === 'cards' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {filtered.map(order => <OrderCard key={order.id} order={order} navigate={navigate}
             updateOrderStatus={updateOrderStatus}
-            drivers={drivers} onAssignDriver={() => setShowDriverModal(order.id)} />)}
+            drivers={drivers} onAssignDriver={() => setShowDriverModal(order.id)}
+            isSelected={selectedOrders.has(order.id)}
+            onSelect={toggleSelectOrder}
+            onDelete={deleteOrder} />)}
         </div>
       ) : (
         <div className="bg-card rounded-xl border border-border shadow-card overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">
+                <th className="text-left px-3 py-2 font-semibold text-xs w-10">
+                  <input type="checkbox" checked={selectedOrders.size === filtered.length && filtered.length > 0}
+                    onChange={toggleSelectAll} className="w-4 h-4 cursor-pointer" />
+                </th>
                 <th className="text-left px-3 py-2 font-semibold text-xs">#</th>
                 <th className="text-left px-3 py-2 font-semibold text-xs">Cliente</th>
                 <th className="text-left px-3 py-2 font-semibold text-xs">Tipo</th>
@@ -255,23 +344,35 @@ const OrdersPage = () => {
                 <th className="text-left px-3 py-2 font-semibold text-xs">Pago</th>
                 <th className="text-right px-3 py-2 font-semibold text-xs">Total</th>
                 <th className="text-right px-3 py-2 font-semibold text-xs">Hora</th>
+                <th className="text-right px-3 py-2 font-semibold text-xs">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map(order => (
-                <tr key={order.id} className="border-b border-border last:border-0 hover:bg-muted/30 cursor-pointer" onClick={() => navigate(`/orders/${order.id}`)}>
-                  <td className="px-3 py-2.5 font-display font-bold">{order.id}</td>
-                  <td className="px-3 py-2.5">{order.customer.name}</td>
-                  <td className="px-3 py-2.5"><OrderTypeBadge type={order.type} /></td>
-                  <td className="px-3 py-2.5"><StatusBadge status={order.status} orderType={order.type} /></td>
-                  <td className="px-3 py-2.5">
+                <tr key={order.id} className={cn('border-b border-border last:border-0 hover:bg-muted/30',
+                  selectedOrders.has(order.id) ? 'bg-primary/5' : '')}>
+                  <td className="px-3 py-2.5" onClick={e => e.stopPropagation()}>
+                    <input type="checkbox" checked={selectedOrders.has(order.id)}
+                      onChange={() => toggleSelectOrder(order.id)} className="w-4 h-4 cursor-pointer" />
+                  </td>
+                  <td className="px-3 py-2.5 font-display font-bold cursor-pointer" onClick={() => navigate(`/orders/${order.id}`)}>{order.id}</td>
+                  <td className="px-3 py-2.5 cursor-pointer" onClick={() => navigate(`/orders/${order.id}`)}>{order.customer.name}</td>
+                  <td className="px-3 py-2.5 cursor-pointer" onClick={() => navigate(`/orders/${order.id}`)}><OrderTypeBadge type={order.type} /></td>
+                  <td className="px-3 py-2.5 cursor-pointer" onClick={() => navigate(`/orders/${order.id}`)}><StatusBadge status={order.status} orderType={order.type} /></td>
+                  <td className="px-3 py-2.5 cursor-pointer" onClick={() => navigate(`/orders/${order.id}`)}>
                     <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full',
                       order.paymentStatus === 'paid' ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning')}>
                       {order.paymentStatus === 'paid' ? '✅ Pagado' : '⏳ Pendiente'}
                     </span>
                   </td>
-                  <td className="px-3 py-2.5 text-right font-display font-semibold">{formatPrice(order.total)}</td>
-                  <td className="px-3 py-2.5 text-right text-muted-foreground">{formatTime(order.createdAt)}</td>
+                  <td className="px-3 py-2.5 text-right font-display font-semibold cursor-pointer" onClick={() => navigate(`/orders/${order.id}`)}>{formatPrice(order.total)}</td>
+                  <td className="px-3 py-2.5 text-right text-muted-foreground cursor-pointer" onClick={() => navigate(`/orders/${order.id}`)}>{formatTime(order.createdAt)}</td>
+                  <td className="px-3 py-2.5 text-right" onClick={e => e.stopPropagation()}>
+                    <button onClick={() => deleteOrder(order.id)}
+                      className="text-destructive hover:text-destructive/80 font-medium">
+                      <Trash2 size={16} />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -310,11 +411,11 @@ const OrdersPage = () => {
 };
 
 // List item
-const OrderListItem = ({ order, navigate, updateOrderStatus, drivers, onAssignDriver }: any) => {
+const OrderListItem = ({ order, navigate, updateOrderStatus, drivers, onAssignDriver, isSelected, onSelect, onDelete }: any) => {
   const driver = order.driverId ? drivers.find((d: Driver) => d.id === order.driverId) : null;
   const typeLabel = order.type === 'delivery' ? '🏠 Domicilio' : order.type === 'pickup' ? '🛍️ Recoger' : '🍽️ Mesa ' + (order.tableNumber || '');
   return (
-    <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden">
+    <div className={cn('bg-card rounded-xl border shadow-card overflow-hidden', isSelected ? 'border-primary bg-primary/5' : 'border-border')}>
       <div className="flex">
         <div className="w-1.5 shrink-0" style={{
           backgroundColor: order.status === 'pending' ? 'hsl(var(--status-pending))' :
@@ -324,6 +425,8 @@ const OrderListItem = ({ order, navigate, updateOrderStatus, drivers, onAssignDr
         }} />
         <div className="flex-1 p-3">
           <div className="flex items-center gap-2 flex-wrap mb-1">
+            <input type="checkbox" checked={isSelected} onChange={() => onSelect(order.id)}
+              className="w-4 h-4 cursor-pointer" onClick={e => e.stopPropagation()} />
             <span className="font-display font-bold text-sm">#{order.id}</span>
             <StatusBadge status={order.status} orderType={order.type} />
             <span className="text-xs font-medium text-muted-foreground">{typeLabel}</span>
@@ -350,6 +453,18 @@ const OrderListItem = ({ order, navigate, updateOrderStatus, drivers, onAssignDr
               className="px-3 py-1.5 rounded-lg text-xs font-medium border border-border hover:bg-muted transition-colors">
               Ver / Editar
             </button>
+            <button onClick={() => onDelete(order.id)}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-destructive/30 text-destructive hover:bg-destructive/10 flex items-center gap-1">
+              <Trash2 size={12} /> Eliminar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+              Ver / Editar
+            </button>
           </div>
         </div>
       </div>
@@ -358,13 +473,17 @@ const OrderListItem = ({ order, navigate, updateOrderStatus, drivers, onAssignDr
 };
 
 // Card
-const OrderCard = ({ order, navigate, updateOrderStatus, drivers, onAssignDriver }: any) => {
+const OrderCard = ({ order, navigate, updateOrderStatus, drivers, onAssignDriver, isSelected, onSelect, onDelete }: any) => {
   const driver = order.driverId ? drivers.find((d: Driver) => d.id === order.driverId) : null;
   const typeLabel = order.type === 'delivery' ? '🏠 Domicilio' : order.type === 'pickup' ? '🛍️ Recoger' : '🍽️ Mesa ' + (order.tableNumber || '');
   return (
-    <div className="bg-card rounded-xl border border-border shadow-card p-4 hover:shadow-elevated transition-shadow cursor-pointer" onClick={() => navigate(`/orders/${order.id}`)}>
-      <div className="flex items-center justify-between mb-2">
-        <span className="font-display font-bold">#{order.id}</span>
+    <div className={cn('bg-card rounded-xl border shadow-card p-4 hover:shadow-elevated transition-all', isSelected ? 'border-primary bg-primary/5' : 'border-border')}>
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex items-center gap-2 flex-1" onClick={e => e.stopPropagation()}>
+          <input type="checkbox" checked={isSelected} onChange={() => onSelect(order.id)}
+            className="w-4 h-4 cursor-pointer" />
+          <span className="font-display font-bold">#{order.id}</span>
+        </div>
         <StatusBadge status={order.status} orderType={order.type} />
       </div>
       <p className="font-medium text-sm mb-1">{order.customer.name}</p>
@@ -379,10 +498,16 @@ const OrderCard = ({ order, navigate, updateOrderStatus, drivers, onAssignDriver
       {order.paymentStatus === 'pending' && <p className="text-xs text-warning font-medium mb-2">⏳ Sin pagar</p>}
       <div className="flex items-center justify-between pt-2 border-t border-border" onClick={e => e.stopPropagation()}>
         <span className="font-display font-bold text-primary">{formatPrice(order.total)}</span>
-        <button onClick={() => navigate(`/orders/${order.id}`)}
-          className="px-2 py-1 rounded text-xs font-medium border border-border hover:bg-muted">
-          Ver / Editar
-        </button>
+        <div className="flex gap-1">
+          <button onClick={() => navigate(`/orders/${order.id}`)}
+            className="px-2 py-1 rounded text-xs font-medium border border-border hover:bg-muted">
+            Ver / Editar
+          </button>
+          <button onClick={() => onDelete(order.id)}
+            className="px-2 py-1 rounded text-xs font-medium border border-destructive/30 text-destructive hover:bg-destructive/10">
+            <Trash2 size={12} />
+          </button>
+        </div>
       </div>
     </div>
   );

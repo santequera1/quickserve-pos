@@ -99,6 +99,9 @@ interface AppState {
   updateOrderNotes: (id: number, notes: string) => void;
   uploadReceipt: (id: number, receiptImage: string) => void;
   assignDriver: (orderId: number, driverId: number) => void;
+  deleteOrder: (id: number) => void;
+  deleteOrders: (ids: number[]) => void;
+  updateOrdersStatus: (ids: number[], status: OrderStatus) => void;
 
   // Products
   addProduct: (product: Omit<Product, 'id'>) => void;
@@ -271,6 +274,30 @@ export const useStore = create<AppState>((set, get) => ({
   assignDriver: (orderId, driverId) => {
     set(s => ({ orders: s.orders.map(o => o.id === orderId ? { ...o, driverId } : o) }));
     api.assignDriver(orderId, driverId).catch(console.error);
+  },
+
+  deleteOrder: (id) => {
+    set(s => ({ orders: s.orders.filter(o => o.id !== id) }));
+    api.deleteOrder(id).catch(err => {
+      console.error('Error deleting order:', err);
+      get().refreshOrders();
+    });
+  },
+
+  deleteOrders: (ids) => {
+    set(s => ({ orders: s.orders.filter(o => !ids.includes(o.id)) }));
+    Promise.all(ids.map(id => api.deleteOrder(id))).catch(err => {
+      console.error('Error deleting orders:', err);
+      get().refreshOrders();
+    });
+  },
+
+  updateOrdersStatus: (ids, status) => {
+    set(s => ({ orders: s.orders.map(o => ids.includes(o.id) ? { ...o, status } : o) }));
+    Promise.all(ids.map(id => api.updateOrderStatus(id, status))).catch(err => {
+      console.error('Error updating orders status:', err);
+      get().refreshOrders();
+    });
   },
 
   addProduct: (product) => {
