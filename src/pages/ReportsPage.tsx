@@ -290,13 +290,12 @@ const ReportsPage = () => {
   });
   const topDrivers = Object.values(driverMap).sort((a, b) => b.deliveries - a.deliveries);
 
-  // Payment pie
+  // Payment pie (sin tarjeta - no se acepta actualmente)
   const paymentPie = [
     { name: 'Efectivo', value: cashTotal },
     { name: 'Transferencia', value: transferTotal },
-    { name: 'Tarjeta', value: cardTotal },
   ].filter(d => d.value > 0);
-  const pieColors = ['#10B981', '#6366F1', '#F59E0B'];
+  const pieColors = ['#10B981', '#6366F1'];
 
   // Export CSV
   const exportCSV = () => {
@@ -485,10 +484,9 @@ const ReportsPage = () => {
 
           {/* Payment methods summary */}
           <div className="bg-card rounded-xl border border-border p-4 shadow-card">
-            <div className="grid grid-cols-3 gap-3">
-              {cashTotal > 0 && <div className="flex justify-between text-sm"><span>💵 Efectivo</span><span className="font-display font-semibold">{formatPrice(cashTotal)}</span></div>}
-              {transferTotal > 0 && <div className="flex justify-between text-sm"><span>📱 Transferencia</span><span className="font-display font-semibold">{formatPrice(transferTotal)}</span></div>}
-              {cardTotal > 0 && <div className="flex justify-between text-sm"><span>💳 Tarjeta</span><span className="font-display font-semibold">{formatPrice(cardTotal)}</span></div>}
+            <div className="flex flex-col sm:flex-row gap-3">
+              {cashTotal > 0 && <div className="flex items-center justify-between sm:flex-col sm:text-center flex-1 gap-1"><span className="text-sm">💵 Efectivo</span><span className="font-display font-semibold text-sm">{formatPrice(cashTotal)}</span></div>}
+              {transferTotal > 0 && <div className="flex items-center justify-between sm:flex-col sm:text-center flex-1 gap-1"><span className="text-sm">📱 Transferencia</span><span className="font-display font-semibold text-sm">{formatPrice(transferTotal)}</span></div>}
             </div>
           </div>
 
@@ -641,22 +639,14 @@ const ReportsPage = () => {
                       </div>
 
                       {/* Metrics grid */}
-                      <div className="grid grid-cols-4 gap-1 text-[10px]">
+                      <div className="grid grid-cols-2 gap-1 text-[10px]">
                         <div className="text-center p-1.5 rounded bg-card/50">
-                          <p className="text-muted-foreground mb-0.5">Entregas</p>
+                          <p className="text-muted-foreground mb-0.5">Domicilios</p>
                           <p className="font-display font-bold text-lg text-success">{d.deliveries}</p>
                         </div>
                         <div className="text-center p-1.5 rounded bg-card/50">
-                          <p className="text-muted-foreground mb-0.5">Ingresos</p>
-                          <p className="font-display font-bold">{formatPrice(d.revenue)}</p>
-                        </div>
-                        <div className="text-center p-1.5 rounded bg-card/50">
-                          <p className="text-muted-foreground mb-0.5">Fees</p>
+                          <p className="text-muted-foreground mb-0.5">Ganancia domicilios</p>
                           <p className="font-display font-bold text-primary">{formatPrice(d.deliveryFees)}</p>
-                        </div>
-                        <div className="text-center p-1.5 rounded bg-card/50">
-                          <p className="text-muted-foreground mb-0.5">Promedio</p>
-                          <p className="font-display font-bold">{formatPrice(d.avgValue)}</p>
                         </div>
                       </div>
                     </div>

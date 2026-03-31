@@ -192,19 +192,19 @@ const OrdersPage = () => {
       </div>
 
       {/* Quick stats bar */}
-      <div className="flex gap-3 text-xs">
-        <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-card border border-border">
+      <div className="flex gap-2 text-xs overflow-x-auto pb-1 -mx-1 px-1">
+        <div className="flex items-center gap-1 px-2.5 py-2 rounded-lg bg-card border border-border shrink-0">
           <span>🍽️</span>
-          <span className="text-success font-semibold">{freeTables} mesas libres</span>
-          <span className="text-muted-foreground">/ {tableCount}</span>
+          <span className="text-success font-semibold">{freeTables} libres</span>
+          <span className="text-muted-foreground">/{tableCount}</span>
         </div>
-        <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-card border border-border">
+        <div className="flex items-center gap-1 px-2.5 py-2 rounded-lg bg-card border border-border shrink-0">
           <span>📦</span>
-          <span className="font-semibold">{orders.filter(o => o.status === 'pending').length} pendientes</span>
+          <span className="font-semibold">{orders.filter(o => o.status === 'pending').length} pend.</span>
         </div>
-        <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-card border border-border">
+        <div className="flex items-center gap-1 px-2.5 py-2 rounded-lg bg-card border border-border shrink-0">
           <span>🔵</span>
-          <span className="font-semibold">{orders.filter(o => o.status === 'preparing').length} preparando</span>
+          <span className="font-semibold">{orders.filter(o => o.status === 'preparing').length} prep.</span>
         </div>
       </div>
 

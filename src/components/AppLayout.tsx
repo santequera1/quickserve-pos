@@ -17,13 +17,6 @@ const navItems = [
   { path: '/settings', label: 'Config', icon: Settings },
 ];
 
-const mobileNav = [
-  { path: '/dashboard', label: 'Inicio', icon: LayoutDashboard },
-  { path: '/orders', label: 'Pedidos', icon: ClipboardList },
-  { path: '/orders/new', label: 'Nuevo', icon: Plus, isCenter: true },
-  { path: '/customers', label: 'Clientes', icon: Users },
-  { path: '/more', label: 'Más', icon: Settings },
-];
 
 export const AppLayout = () => {
   const location = useLocation();
@@ -59,10 +52,10 @@ export const AppLayout = () => {
       {/* Desktop Sidebar */}
       <aside className={cn('hidden lg:flex flex-col fixed left-0 top-0 bottom-0 bg-sidebar text-sidebar-foreground z-40 transition-all duration-300', sideW)}>
         <div className={cn('p-3 flex items-center gap-2', sidebarCollapsed ? 'flex-col' : '')}>
-          <div className={cn('flex items-center gap-2 flex-1 min-w-0', sidebarCollapsed && 'justify-center')}>
+          <button onClick={() => navigate('/dashboard')} className={cn('flex items-center gap-2 flex-1 min-w-0', sidebarCollapsed && 'justify-center')}>
             <img src="/logo.webp" alt="Logo" className="w-8 h-8 rounded-md object-contain shrink-0" />
             {!sidebarCollapsed && <span className="font-display font-bold text-sm whitespace-nowrap truncate">Las Gaviotas</span>}
-          </div>
+          </button>
           <button onClick={toggleSidebar}
             className={cn('w-7 h-7 rounded-md hover:bg-sidebar-accent/50 flex items-center justify-center text-sidebar-foreground/60 hover:text-sidebar-foreground shrink-0',
               sidebarCollapsed && 'mt-1')}
@@ -145,9 +138,9 @@ export const AppLayout = () => {
 
       {/* Topbar */}
       <header className={cn('fixed top-0 right-0 left-0 h-14 bg-card border-b border-border z-30 flex items-center px-4 gap-3', 'md:left-16', headerML)}>
-        <h1 className="font-display font-semibold text-base flex-1 md:hidden flex items-center gap-2">
+        <button onClick={() => navigate('/dashboard')} className="font-display font-semibold text-base flex-1 md:hidden flex items-center gap-2">
           <img src="/logo.webp" alt="Logo" className="w-7 h-7 rounded-md object-contain" /> Las Gaviotas
-        </h1>
+        </button>
         <h1 className="font-display font-semibold text-base flex-1 hidden md:block capitalize">
           {navItems.find(n => location.pathname.startsWith(n.path))?.label || 'Dashboard'}
         </h1>
