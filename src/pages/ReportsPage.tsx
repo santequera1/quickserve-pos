@@ -118,6 +118,75 @@ const ReportsPage = () => {
   // Delivery fee income
   const deliveryFeeTotal = validOrders.reduce((s, o) => s + o.deliveryFee, 0);
 
+  // Calculate previous period metrics for comparison
+  const getPreviousPeriodOrders = () => {
+    const nowColombia = getColombiaNow();
+    const todayStr = getColombiaTodayStr();
+    const yesterdayStr = getColombiaYesterdayStr();
+
+    return orders.filter(o => {
+      const orderDate = getOrderDateStr(o.createdAt);
+
+      if (period === 'today') {
+        if (orderDate !== yesterdayStr) return false;
+      } else if (period === 'yesterday') {
+        const dayBeforeYesterday = new Date(new Date(yesterdayStr).getTime() - 86400000);
+        const dbStr = dayBeforeYesterday.toISOString().split('T')[0];
+        if (orderDate !== dbStr) return false;
+      } else if (period === 'week') {
+        const currentWeekAgo = new Date(nowColombia);
+        currentWeekAgo.setDate(currentWeekAgo.getDate() - 7);
+        const prevWeekAgo = new Date(currentWeekAgo);
+        prevWeekAgo.setDate(prevWeekAgo.getDate() - 7);
+        const pwStr = prevWeekAgo.toISOString().split('T')[0];
+        const cwStr = currentWeekAgo.toISOString().split('T')[0];
+        if (orderDate < pwStr || orderDate >= cwStr) return false;
+      } else if (period === 'month') {
+        const currentMonthAgo = new Date(nowColombia);
+        currentMonthAgo.setDate(currentMonthAgo.getDate() - 30);
+        const prevMonthAgo = new Date(currentMonthAgo);
+        prevMonthAgo.setDate(prevMonthAgo.getDate() - 30);
+        const pmStr = prevMonthAgo.toISOString().split('T')[0];
+        const cmStr = currentMonthAgo.toISOString().split('T')[0];
+        if (orderDate < pmStr || orderDate >= cmStr) return false;
+      } else if (period === 'year') {
+        const currentYear = new Date(nowColombia).getFullYear();
+        const prevYear = currentYear - 1;
+        const orderYear = new Date(orderDate).getFullYear();
+        if (orderYear !== prevYear) return false;
+      } else {
+        return false;
+      }
+
+      // Apply same filters
+      if (typeFilter !== 'all' && o.type !== typeFilter) return false;
+      if (paymentFilter !== 'all' && o.paymentMethod !== paymentFilter) return false;
+      if (statusFilter !== 'all' && o.status !== statusFilter) return false;
+      if (driverFilter !== 'all') {
+        if (driverFilter === 'none' && o.driverId) return false;
+        if (driverFilter !== 'none' && o.driverId !== Number(driverFilter)) return false;
+      }
+
+      return true;
+    });
+  };
+
+  const prevFiltered = period !== 'custom' ? getPreviousPeriodOrders() : [];
+  const prevValidOrders = prevFiltered.filter(o => o.status !== 'cancelled');
+  const prevTotalSales = prevValidOrders.reduce((s, o) => s + o.total, 0);
+  const prevTotalOrders = prevValidOrders.length;
+  const prevAvgTicket = prevTotalOrders > 0 ? Math.round(prevTotalSales / prevTotalOrders) : 0;
+
+  // Calculate percentage changes
+  const calculateChange = (current: number, previous: number) => {
+    if (previous === 0) return current > 0 ? 100 : 0;
+    return Math.round(((current - previous) / previous) * 100);
+  };
+
+  const salesChange = calculateChange(totalSales, prevTotalSales);
+  const ordersChange = calculateChange(totalOrders, prevTotalOrders);
+  const avgTicketChange = calculateChange(avgTicket, prevAvgTicket);
+
   // Top products
   const productMap: Record<string, { name: string; qty: number; revenue: number }> = {};
   validOrders.forEach(o => o.items.forEach(i => {
@@ -352,15 +421,30 @@ const ReportsPage = () => {
             <div className="bg-card rounded-xl border border-border p-4 shadow-card">
               <p className="text-xs text-muted-foreground mb-1">💰 Total vendido</p>
               <p className="font-display font-bold text-2xl text-primary">{formatPrice(totalSales)}</p>
+              {period !== 'custom' && prevTotalSales > 0 && (
+                <p className={cn('text-[10px] font-semibold mt-1', salesChange >= 0 ? 'text-success' : 'text-destructive')}>
+                  {salesChange >= 0 ? '📈 +' : '📉'}{Math.abs(salesChange)}% vs período anterior
+                </p>
+              )}
             </div>
             <div className="bg-card rounded-xl border border-border p-4 shadow-card">
               <p className="text-xs text-muted-foreground mb-1">📦 Pedidos</p>
               <p className="font-display font-bold text-2xl">{totalOrders}</p>
               {cancelledPercentage > 0 && <p className="text-[10px] text-destructive">❌ {cancelledCount} ({cancelledPercentage}%)</p>}
+              {period !== 'custom' && prevTotalOrders > 0 && (
+                <p className={cn('text-[10px] font-semibold mt-1', ordersChange >= 0 ? 'text-success' : 'text-destructive')}>
+                  {ordersChange >= 0 ? '📈 +' : '📉'}{Math.abs(ordersChange)}% vs período anterior
+                </p>
+              )}
             </div>
             <div className="bg-card rounded-xl border border-border p-4 shadow-card">
               <p className="text-xs text-muted-foreground mb-1">🎫 Ticket promedio</p>
               <p className="font-display font-bold text-2xl">{formatPrice(avgTicket)}</p>
+              {period !== 'custom' && prevAvgTicket > 0 && (
+                <p className={cn('text-[10px] font-semibold mt-1', avgTicketChange >= 0 ? 'text-success' : 'text-destructive')}>
+                  {avgTicketChange >= 0 ? '📈 +' : '📉'}{Math.abs(avgTicketChange)}% vs período anterior
+                </p>
+              )}
             </div>
             <div className="bg-card rounded-xl border border-border p-4 shadow-card">
               <p className="text-xs text-muted-foreground mb-1">✅ Cobrado</p>
