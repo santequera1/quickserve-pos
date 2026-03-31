@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Lock, User } from 'lucide-react';
-import { useStore, type UserRole } from '@/store/useStore';
+import { useStore } from '@/store/useStore';
 
 const LoginPage = () => {
   const [username, setUsername] = useState('');
@@ -10,25 +10,17 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const login = useStore(s => s.login);
-
-  const credentials: Record<string, { password: string; role: UserRole }> = {
-    admin: { password: 'admin123', role: 'admin' },
-    cajero: { password: 'cajero123', role: 'cashier' },
-    cocina: { password: 'cocina123', role: 'kitchen' },
-  };
+  const loginWithCredentials = useStore(s => s.loginWithCredentials);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    await new Promise(r => setTimeout(r, 800));
-    const cred = credentials[username.toLowerCase()];
-    if (cred && cred.password === password) {
-      login(cred.role);
+    try {
+      await loginWithCredentials(username.toLowerCase(), password);
       navigate('/dashboard');
-    } else {
-      setError('Usuario o contraseña incorrectos');
+    } catch (err: any) {
+      setError(err.message || 'Usuario o contraseña incorrectos');
     }
     setLoading(false);
   };
@@ -50,9 +42,9 @@ const LoginPage = () => {
       <div className="w-full max-w-sm relative z-10">
         <div className="rounded-2xl p-8 backdrop-blur-xl" style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}>
           <div className="text-center mb-8">
-            <span className="text-5xl block mb-3">🍔</span>
-            <h1 className="font-display text-2xl font-bold" style={{ color: 'white' }}>RÁPIDO POS</h1>
-            <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.6)' }}>Sistema inteligente de pedidos</p>
+            <img src="/logo.webp" alt="Las Gaviotas" className="w-28 h-28 mx-auto mb-3 rounded-2xl object-contain" />
+            <h1 className="font-display text-2xl font-bold" style={{ color: 'white' }}>Las Gaviotas</h1>
+            <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.6)' }}>Sistema de pedidos</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
@@ -104,11 +96,9 @@ const LoginPage = () => {
             <p className="text-[10px] text-center mb-2" style={{ color: 'rgba(255,255,255,0.4)' }}>Accesos rápidos de prueba:</p>
             <div className="flex gap-2">
               {[
-                { u: 'admin', label: '👑 Admin' },
-                { u: 'cajero', label: '💵 Cajero' },
-                { u: 'cocina', label: '👨‍🍳 Cocina' },
-              ].map(({ u, label }) => (
-                <button key={u} onClick={() => { setUsername(u); setPassword(`${u}123`); }}
+                { u: 'admin', p: 'admin123', label: '👑 Admin' },
+              ].map(({ u, p, label }) => (
+                <button key={u} onClick={() => { setUsername(u); setPassword(p); }}
                   className="flex-1 py-1.5 rounded-md text-[11px] font-medium transition-all hover:opacity-80"
                   style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.08)' }}>
                   {label}

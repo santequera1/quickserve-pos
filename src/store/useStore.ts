@@ -1,6 +1,7 @@
 import { create } from 'zustand';
+import { api, setToken } from '@/lib/api';
 
-export type OrderStatus = 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
+export type OrderStatus = 'pending' | 'preparing' | 'ready' | 'shipped' | 'delivered' | 'cancelled';
 export type OrderType = 'delivery' | 'pickup' | 'dine-in';
 export type PaymentMethod = 'cash' | 'transfer' | 'card';
 export type UserRole = 'admin' | 'cashier' | 'kitchen';
@@ -55,216 +56,288 @@ export interface Order {
   paymentMethod: PaymentMethod;
   paymentStatus: 'pending' | 'paid';
   createdAt: string;
+  driverId?: number;
+  receiptImage?: string;
+  notes?: string;
+}
+
+export interface Driver {
+  id: number;
+  name: string;
+  phone: string;
+  available: boolean;
 }
 
 interface AppState {
   user: { name: string; role: UserRole } | null;
+  restoring: boolean;
   categories: Category[];
   products: Product[];
   customers: Customer[];
   orders: Order[];
-  nextOrderId: number;
+  drivers: Driver[];
   deliveryFee: number;
   tableCount: number;
+  initialized: boolean;
+  sidebarCollapsed: boolean;
 
+  // Auth
+  loginWithCredentials: (username: string, password: string) => Promise<void>;
   login: (role: UserRole) => void;
   logout: () => void;
+  restoreSession: () => Promise<void>;
 
-  addOrder: (order: Omit<Order, 'id' | 'createdAt'>) => number;
+  // Data loading
+  initialize: () => Promise<void>;
+  refreshOrders: () => Promise<void>;
+
+  // Orders
+  addOrder: (order: Omit<Order, 'id' | 'createdAt'>) => Promise<number>;
   updateOrderStatus: (id: number, status: OrderStatus) => void;
+  updatePaymentStatus: (id: number, paymentStatus: 'pending' | 'paid', paymentMethod?: PaymentMethod) => void;
+  updateOrderCustomer: (id: number, data: { name?: string; phone?: string; address?: string }) => void;
+  updateOrderNotes: (id: number, notes: string) => void;
+  uploadReceipt: (id: number, receiptImage: string) => void;
+  assignDriver: (orderId: number, driverId: number) => void;
 
+  // Products
   addProduct: (product: Omit<Product, 'id'>) => void;
   updateProduct: (id: number, data: Partial<Product>) => void;
   toggleProductAvailability: (id: number) => void;
 
+  // Customers
   addCustomer: (customer: Omit<Customer, 'id' | 'totalOrders' | 'totalSpent' | 'lastOrder' | 'tag'>) => void;
+  updateCustomer: (id: number, data: Partial<Customer>) => void;
+  deleteCustomer: (id: number) => void;
   findCustomerByPhone: (phone: string) => Customer | undefined;
+
+  // Drivers
+  addDriver: (driver: Omit<Driver, 'id'>) => void;
+  updateDriver: (id: number, data: Partial<Driver>) => void;
+  deleteDriver: (id: number) => void;
+
+  // UI
+  toggleSidebar: () => void;
+
+  // Socket handler
+  handleOrderEvent: (order: Order) => void;
 }
-
-const initialCategories: Category[] = [
-  { id: 1, name: "Perros Calientes", emoji: "🌭", color: "#F59E0B" },
-  { id: 2, name: "Hamburguesas", emoji: "🍔", color: "#EF4444" },
-  { id: 3, name: "Asados Especiales", emoji: "🥩", color: "#B45309" },
-  { id: 4, name: "Patacones", emoji: "🫓", color: "#D97706" },
-  { id: 5, name: "Picadas", emoji: "🍟", color: "#DC2626" },
-  { id: 6, name: "Salchipapas", emoji: "🍟", color: "#EA580C" },
-  { id: 7, name: "Adiciones", emoji: "➕", color: "#6B7280" },
-  { id: 8, name: "Bebidas", emoji: "🥤", color: "#3B82F6" },
-];
-
-const initialProducts: Product[] = [
-  // Perros Calientes
-  { id: 1, name: "Perro Súper", categoryId: 1, price: 12000, available: true, image: null },
-  { id: 2, name: "Perro Americano", categoryId: 1, price: 16000, available: true, image: null },
-  { id: 3, name: "Perro Suizo", categoryId: 1, price: 18000, available: true, image: null },
-  { id: 4, name: "Choriperro", categoryId: 1, price: 18000, available: true, image: null },
-  { id: 5, name: "Perro Ranchero", categoryId: 1, price: 20000, available: true, image: null },
-  { id: 6, name: "Chori Ranchero", categoryId: 1, price: 28000, available: true, image: null },
-  { id: 7, name: "Chori Gaviotero", categoryId: 1, price: 32000, available: true, image: null },
-  // Hamburguesas
-  { id: 8, name: "Hamburguesa Sencilla", categoryId: 2, price: 18000, available: true, image: null },
-  { id: 9, name: "Hamburguesa Doble Carne", categoryId: 2, price: 28000, available: true, image: null },
-  { id: 10, name: "Hamburguesa Ranchera", categoryId: 2, price: 28000, available: true, image: null },
-  { id: 11, name: "Hamburguesa de Pollo", categoryId: 2, price: 20000, available: true, image: null },
-  { id: 12, name: "Hamburguesa Mixta", categoryId: 2, price: 29000, available: true, image: null },
-  { id: 13, name: "Hamburguesa Gaviota", categoryId: 2, price: 32000, available: true, image: null },
-  { id: 14, name: "Rancho Burgue Deluxe", categoryId: 2, price: 28000, available: true, image: null, description: "⭐ Nuevo" },
-  // Asados
-  { id: 15, name: "Costilla BBQ (300gr)", categoryId: 3, price: 27000, available: true, image: null },
-  { id: 16, name: "Pechuga Asada (300gr)", categoryId: 3, price: 26000, available: true, image: null },
-  { id: 17, name: "Punta de Anca (300gr)", categoryId: 3, price: 28000, available: true, image: null },
-  { id: 18, name: "Punta Gorda (300gr)", categoryId: 3, price: 35000, available: true, image: null },
-  { id: 19, name: "Chorizo Artesanal", categoryId: 3, price: 17000, available: true, image: null },
-  // Patacones
-  { id: 20, name: "Patacón Sencillo", categoryId: 4, price: 17000, available: true, image: null },
-  { id: 21, name: "Patacón Choributy", categoryId: 4, price: 20000, available: true, image: null },
-  { id: 22, name: "Patacón Especial", categoryId: 4, price: 27000, available: true, image: null },
-  { id: 23, name: "Patacón Ranchero", categoryId: 4, price: 32000, available: true, image: null },
-  // Picadas
-  { id: 24, name: "Picada Personal", categoryId: 5, price: 27000, available: true, image: null },
-  { id: 25, name: "Picada para Dos", categoryId: 5, price: 40000, available: true, image: null },
-  { id: 26, name: "Picada Gaviotera (3-4)", categoryId: 5, price: 58000, available: true, image: null },
-  { id: 27, name: "Picada Extra-Familiar (5-6)", categoryId: 5, price: 80000, available: true, image: null },
-  // Salchipapas
-  { id: 28, name: "Papas Bacon", categoryId: 6, price: 12000, available: true, image: null },
-  { id: 29, name: "Salchipapa Gratinada", categoryId: 6, price: 17000, available: true, image: null },
-  { id: 30, name: "Salchisuiza", categoryId: 6, price: 20000, available: true, image: null },
-  { id: 31, name: "Salchiranchera", categoryId: 6, price: 20000, available: true, image: null },
-  { id: 32, name: "Choributy", categoryId: 6, price: 20000, available: true, image: null },
-  // Adiciones
-  { id: 33, name: "Papa Francesa", categoryId: 7, price: 6000, available: true, image: null },
-  { id: 34, name: "Yuca Frita", categoryId: 7, price: 6000, available: true, image: null },
-  { id: 35, name: "Queso Mozarella", categoryId: 7, price: 6000, available: true, image: null },
-  { id: 36, name: "Tocino", categoryId: 7, price: 5000, available: true, image: null },
-  { id: 37, name: "Ranchera", categoryId: 7, price: 8000, available: true, image: null },
-  { id: 38, name: "Costilla BBQ Adición", categoryId: 7, price: 20000, available: true, image: null },
-  { id: 39, name: "Gratinado adicional", categoryId: 7, price: 6000, available: true, image: null },
-  // Bebidas
-  { id: 40, name: "Coca Cola Personal", categoryId: 8, price: 4000, available: true, image: null },
-  { id: 41, name: "Coca Cola 1.5L", categoryId: 8, price: 8000, available: true, image: null },
-  { id: 42, name: "Kola Román Personal", categoryId: 8, price: 4000, available: true, image: null },
-  { id: 43, name: "Kola Román 1.5L", categoryId: 8, price: 7000, available: true, image: null },
-  { id: 44, name: "Cuatro Personal", categoryId: 8, price: 4000, available: true, image: null },
-  { id: 45, name: "Cuatro 1.5L", categoryId: 8, price: 7000, available: true, image: null },
-  { id: 46, name: "Agua", categoryId: 8, price: 3000, available: true, image: null },
-];
-
-const initialCustomers: Customer[] = [
-  { id: 1, name: "Ana García", phone: "3001234567", address: "Cl 45 #12-34, Cartagena", notes: "Sin cebolla en todo", totalOrders: 12, totalSpent: 480000, lastOrder: "2024-01-15", tag: "frequent" },
-  { id: 2, name: "Carlos Rodríguez", phone: "3109876543", address: "Cra 8 #32-21", notes: "", totalOrders: 2, totalSpent: 72000, lastOrder: "2024-01-13", tag: "new" },
-  { id: 3, name: "María López", phone: "3205551234", address: "Av Consulado #45", notes: "Alérgica al gluten", totalOrders: 8, totalSpent: 320000, lastOrder: "2024-01-14", tag: "frequent" },
-];
-
-const initialOrders: Order[] = [
-  {
-    id: 1042, type: "delivery", status: "pending",
-    customer: { name: "Ana García", phone: "3001234567", address: "Cl 45 #12-34" },
-    items: [
-      { productId: 8, name: "Hamburguesa Sencilla", quantity: 1, price: 18000, notes: "Sin cebolla" },
-      { productId: 40, name: "Coca Cola Personal", quantity: 2, price: 4000, notes: "" },
-    ],
-    subtotal: 26000, deliveryFee: 3000, total: 29000,
-    paymentMethod: "cash", paymentStatus: "pending", createdAt: new Date().toISOString(),
-  },
-  {
-    id: 1043, type: "dine-in", status: "preparing", tableNumber: 4,
-    customer: { name: "Mesa 4" },
-    items: [
-      { productId: 9, name: "Hamburguesa Doble Carne", quantity: 2, price: 28000, notes: "" },
-      { productId: 33, name: "Papa Francesa", quantity: 2, price: 6000, notes: "" },
-    ],
-    subtotal: 68000, deliveryFee: 0, total: 68000,
-    paymentMethod: "transfer", paymentStatus: "paid", createdAt: new Date(Date.now() - 5 * 60000).toISOString(),
-  },
-  {
-    id: 1044, type: "pickup", status: "ready",
-    customer: { name: "Carlos Rodríguez", phone: "3109876543" },
-    items: [
-      { productId: 15, name: "Costilla BBQ (300gr)", quantity: 1, price: 27000, notes: "" },
-      { productId: 44, name: "Cuatro Personal", quantity: 1, price: 4000, notes: "" },
-    ],
-    subtotal: 31000, deliveryFee: 0, total: 31000,
-    paymentMethod: "cash", paymentStatus: "paid", createdAt: new Date(Date.now() - 15 * 60000).toISOString(),
-  },
-  {
-    id: 1041, type: "delivery", status: "delivered",
-    customer: { name: "María López", phone: "3205551234", address: "Av Consulado #45" },
-    items: [
-      { productId: 20, name: "Patacón Sencillo", quantity: 1, price: 17000, notes: "" },
-      { productId: 42, name: "Kola Román Personal", quantity: 2, price: 4000, notes: "" },
-    ],
-    subtotal: 25000, deliveryFee: 3000, total: 28000,
-    paymentMethod: "transfer", paymentStatus: "paid", createdAt: new Date(Date.now() - 60 * 60000).toISOString(),
-  },
-  {
-    id: 1040, type: "dine-in", status: "delivered", tableNumber: 2,
-    customer: { name: "Mesa 2" },
-    items: [
-      { productId: 26, name: "Picada Gaviotera (3-4)", quantity: 1, price: 58000, notes: "" },
-      { productId: 41, name: "Coca Cola 1.5L", quantity: 2, price: 8000, notes: "" },
-    ],
-    subtotal: 74000, deliveryFee: 0, total: 74000,
-    paymentMethod: "card", paymentStatus: "paid", createdAt: new Date(Date.now() - 120 * 60000).toISOString(),
-  },
-];
 
 export const useStore = create<AppState>((set, get) => ({
   user: null,
-  categories: initialCategories,
-  products: initialProducts,
-  customers: initialCustomers,
-  orders: initialOrders,
-  nextOrderId: 1045,
+  restoring: true,
+  categories: [],
+  products: [],
+  customers: [],
+  orders: [],
+  drivers: [],
   deliveryFee: 3000,
   tableCount: 12,
+  initialized: false,
+  sidebarCollapsed: false,
+
+  loginWithCredentials: async (username, password) => {
+    const { token, user } = await api.login(username, password);
+    setToken(token);
+    set({ user: { name: user.name, role: user.role as UserRole } });
+    await get().initialize();
+  },
 
   login: (role) => {
-    const names = { admin: 'Administrador', cashier: 'Cajero', kitchen: 'Cocina' };
-    set({ user: { name: names[role], role } });
+    const creds: Record<string, [string, string]> = {
+      admin: ['admin', 'admin123'],
+      cashier: ['cajero', 'cajero123'],
+      kitchen: ['cocina', 'cocina123'],
+    };
+    const [u, p] = creds[role];
+    get().loginWithCredentials(u, p).catch(console.error);
   },
-  logout: () => set({ user: null }),
 
-  addOrder: (order) => {
-    const id = get().nextOrderId;
-    set(s => ({
-      orders: [{ ...order, id, createdAt: new Date().toISOString() }, ...s.orders],
-      nextOrderId: s.nextOrderId + 1,
-    }));
-    return id;
+  logout: () => {
+    setToken(null);
+    set({ user: null, restoring: false, initialized: false, categories: [], products: [], customers: [], orders: [], drivers: [] });
+  },
+
+  restoreSession: async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      set({ restoring: false });
+      return;
+    }
+    try {
+      // Decode JWT payload (base64)
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      // Check if token is expired
+      if (payload.exp && payload.exp * 1000 < Date.now()) {
+        setToken(null);
+        set({ restoring: false });
+        return;
+      }
+      set({ user: { name: payload.name, role: payload.role as UserRole }, restoring: false });
+      await get().initialize();
+    } catch {
+      setToken(null);
+      set({ restoring: false });
+    }
+  },
+
+  initialize: async () => {
+    try {
+      const [categories, products, customers, orders, settings, drivers] = await Promise.all([
+        api.getCategories(),
+        api.getProducts(),
+        api.getCustomers(),
+        api.getOrders(),
+        api.getSettings(),
+        api.getDrivers(),
+      ]);
+      set({
+        categories,
+        products,
+        customers,
+        orders,
+        drivers,
+        deliveryFee: settings.deliveryFee || 3000,
+        tableCount: settings.tableCount || 12,
+        initialized: true,
+      });
+    } catch (err) {
+      console.error('Error initializing data:', err);
+    }
+  },
+
+  refreshOrders: async () => {
+    try {
+      const orders = await api.getOrders();
+      set({ orders });
+    } catch (err) {
+      console.error('Error refreshing orders:', err);
+    }
+  },
+
+  addOrder: async (order) => {
+    try {
+      const created = await api.addOrder(order);
+      // Add only if not already present (socket may have added it)
+      set(s => {
+        if (s.orders.some(o => o.id === created.id)) return s;
+        return { orders: [created, ...s.orders] };
+      });
+      return created.id;
+    } catch (err) {
+      console.error('Error creating order:', err);
+      return -1;
+    }
   },
 
   updateOrderStatus: (id, status) => {
-    set(s => ({
-      orders: s.orders.map(o => o.id === id ? { ...o, status } : o),
-    }));
+    set(s => ({ orders: s.orders.map(o => o.id === id ? { ...o, status } : o) }));
+    api.updateOrderStatus(id, status).catch(err => {
+      console.error('Error updating order status:', err);
+      get().refreshOrders();
+    });
+  },
+
+  updatePaymentStatus: (id, paymentStatus, paymentMethod) => {
+    set(s => ({ orders: s.orders.map(o => o.id === id ? { ...o, paymentStatus, ...(paymentMethod ? { paymentMethod } : {}) } : o) }));
+    api.updatePaymentStatus(id, paymentStatus, paymentMethod).catch(err => {
+      console.error('Error updating payment status:', err);
+      get().refreshOrders();
+    });
+  },
+
+  updateOrderCustomer: (id, data) => {
+    set(s => ({ orders: s.orders.map(o => o.id === id ? { ...o, customer: { ...o.customer, ...data } } : o) }));
+    api.updateOrderCustomer(id, data).catch(err => {
+      console.error('Error updating order customer:', err);
+      get().refreshOrders();
+    });
+  },
+
+  uploadReceipt: (id, receiptImage) => {
+    set(s => ({ orders: s.orders.map(o => o.id === id ? { ...o, receiptImage } : o) }));
+    api.uploadReceipt(id, receiptImage).catch(err => {
+      console.error('Error uploading receipt:', err);
+    });
+  },
+
+  updateOrderNotes: (id, notes) => {
+    set(s => ({ orders: s.orders.map(o => o.id === id ? { ...o, notes } : o) }));
+    api.updateOrderNotes(id, notes).catch(err => {
+      console.error('Error updating order notes:', err);
+    });
+  },
+
+  assignDriver: (orderId, driverId) => {
+    set(s => ({ orders: s.orders.map(o => o.id === orderId ? { ...o, driverId } : o) }));
+    api.assignDriver(orderId, driverId).catch(console.error);
   },
 
   addProduct: (product) => {
-    set(s => ({
-      products: [...s.products, { ...product, id: Math.max(...s.products.map(p => p.id)) + 1 }],
-    }));
+    api.addProduct(product).then(created => {
+      set(s => ({ products: [...s.products, created] }));
+    }).catch(console.error);
   },
 
   updateProduct: (id, data) => {
-    set(s => ({
-      products: s.products.map(p => p.id === id ? { ...p, ...data } : p),
-    }));
+    set(s => ({ products: s.products.map(p => p.id === id ? { ...p, ...data } : p) }));
+    api.updateProduct(id, data).catch(console.error);
   },
 
   toggleProductAvailability: (id) => {
-    set(s => ({
-      products: s.products.map(p => p.id === id ? { ...p, available: !p.available } : p),
-    }));
+    set(s => ({ products: s.products.map(p => p.id === id ? { ...p, available: !p.available } : p) }));
+    api.toggleAvailability(id).catch(console.error);
   },
 
   addCustomer: (customer) => {
-    set(s => ({
-      customers: [...s.customers, {
-        ...customer, id: Math.max(...s.customers.map(c => c.id)) + 1,
-        totalOrders: 0, totalSpent: 0, lastOrder: new Date().toISOString().split('T')[0], tag: 'new',
-      }],
-    }));
+    api.addCustomer(customer).then(created => {
+      set(s => ({ customers: [...s.customers, created] }));
+    }).catch(console.error);
   },
 
-  findCustomerByPhone: (phone) => get().customers.find(c => c.phone === phone),
+  updateCustomer: (id, data) => {
+    set(s => ({ customers: s.customers.map(c => c.id === id ? { ...c, ...data } : c) }));
+    api.updateCustomer(id, data).catch(console.error);
+  },
+
+  deleteCustomer: (id) => {
+    set(s => ({ customers: s.customers.filter(c => c.id !== id) }));
+    api.deleteCustomer(id).catch(console.error);
+  },
+
+  findCustomerByPhone: (phone) => {
+    return get().customers.find(c => c.phone === phone);
+  },
+
+  // Drivers
+  addDriver: (driver) => {
+    api.addDriver(driver).then(created => {
+      set(s => ({ drivers: [...s.drivers, created] }));
+    }).catch(console.error);
+  },
+
+  updateDriver: (id, data) => {
+    set(s => ({ drivers: s.drivers.map(d => d.id === id ? { ...d, ...data } : d) }));
+    api.updateDriver(id, data).catch(console.error);
+  },
+
+  deleteDriver: (id) => {
+    set(s => ({ drivers: s.drivers.filter(d => d.id !== id) }));
+    api.deleteDriver(id).catch(console.error);
+  },
+
+  toggleSidebar: () => set(s => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+
+  handleOrderEvent: (order) => {
+    set(s => {
+      // Always deduplicate: replace if exists, add only if truly new
+      const idx = s.orders.findIndex(o => o.id === order.id);
+      if (idx >= 0) {
+        const updated = [...s.orders];
+        updated[idx] = order;
+        return { orders: updated };
+      }
+      return { orders: [order, ...s.orders] };
+    });
+  },
 }));

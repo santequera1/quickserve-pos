@@ -1,36 +1,103 @@
-import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, Minus, Plus, X, ShoppingCart, Check } from 'lucide-react';
-import { useStore, type OrderType, type OrderItem, type PaymentMethod } from '@/store/useStore';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, Search, Minus, Plus, X, ShoppingCart, Check, Upload, Truck } from 'lucide-react';
+import { useStore, type OrderType, type OrderItem, type PaymentMethod, type Driver } from '@/store/useStore';
 import { formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
 type Step = 'type' | 'customer' | 'products' | 'summary';
 
+const transferAccounts = [
+  { label: 'Bancolombia', detail: '67800007198 - Ahorro', icon: '🏦' },
+  { label: 'Nequi', detail: '3142211678', icon: '💜' },
+  { label: 'Daviplata', detail: '3142211678', icon: '🔴' },
+];
+
+const getDriverDisplayName = (d: Driver) => {
+  const parts = d.name.split(':');
+  return parts.length === 2 ? parts[1] : d.name;
+};
+
 const NewOrderPage = () => {
   const navigate = useNavigate();
-  const { categories, products, customers, addOrder, findCustomerByPhone, addCustomer, deliveryFee, tableCount } = useStore();
+  const [searchParams] = useSearchParams();
+  const { categories, products, customers, addOrder, findCustomerByPhone, addCustomer, tableCount, drivers, assignDriver, uploadReceipt } = useStore();
 
-  const [step, setStep] = useState<Step>('type');
-  const [orderType, setOrderType] = useState<OrderType | null>(null);
+  // Read URL params for table pre-selection
+  const urlTable = searchParams.get('table');
+  const urlType = searchParams.get('type');
+
+  const [step, setStep] = useState<Step>(urlType ? 'customer' : 'type');
+  const [orderType, setOrderType] = useState<OrderType | null>(urlType as OrderType | null);
   const [phone, setPhone] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [address, setAddress] = useState('');
   const [customerNotes, setCustomerNotes] = useState('');
-  const [selectedTable, setSelectedTable] = useState<number | null>(null);
+  const [selectedTable, setSelectedTable] = useState<number | null>(urlTable ? Number(urlTable) : null);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState<OrderItem[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | 'later'>('cash');
   const [cashReceived, setCashReceived] = useState('');
+  const [customDeliveryFee, setCustomDeliveryFee] = useState('3000');
   const [showProductModal, setShowProductModal] = useState<number | null>(null);
   const [modalQty, setModalQty] = useState(1);
   const [modalNotes, setModalNotes] = useState('');
   const [showCart, setShowCart] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState<number | null>(null);
+  const [transferAccount, setTransferAccount] = useState('');
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const [selectedDriverId, setSelectedDriverId] = useState<number | null>(null);
+  const [orderStatus, setOrderStatus] = useState<'pending' | 'preparing' | 'ready' | 'shipped' | 'delivered'>('pending');
+
+  // Available domiciliarios only
+  const availableDrivers = drivers.filter(d => {
+    const parts = d.name.split(':');
+    const role = parts.length === 2 ? parts[0] : 'domiciliario';
+    return role === 'domiciliario' && d.available;
+  });
 
   const foundCustomer = phone.length >= 7 ? findCustomerByPhone(phone) : undefined;
+
+  const handlePhoneSearch = (value: string) => {
+    setPhone(value);
+    if (value.length >= 7) {
+      const c = findCustomerByPhone(value);
+      if (c) {
+        setCustomerName(c.name);
+        setAddress(c.address);
+        setCustomerNotes(c.notes);
+      }
+    }
+  };
+
+  const handleNameSearch = (value: string) => {
+    setCustomerName(value);
+    // Auto-fill when name matches exactly (after selecting from datalist)
+    const match = customers.find(c => c.name.toLowerCase() === value.toLowerCase());
+    if (match) {
+      setPhone(match.phone);
+      setAddress(match.address);
+      setCustomerNotes(match.notes);
+    }
+  };
+
+  // Filtered customer suggestions for autocomplete
+  const customerSuggestions = customerName.length >= 2
+    ? customers.filter(c => c.name.toLowerCase().includes(customerName.toLowerCase()) || c.phone.includes(customerName))
+    : [];
+
+  const handleReceiptUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setReceiptFile(file);
+      const reader = new FileReader();
+      reader.onload = () => setReceiptPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
 
   const filteredProducts = useMemo(() => {
     let list = products.filter(p => p.available);
@@ -42,7 +109,7 @@ const NewOrderPage = () => {
   const cartTotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
   const cartCount = cart.reduce((s, i) => s + i.quantity, 0);
   const isDelivery = orderType === 'delivery';
-  const fee = isDelivery ? deliveryFee : 0;
+  const fee = isDelivery ? Number(customDeliveryFee) || 0 : 0;
   const grandTotal = cartTotal + fee;
   const change = paymentMethod === 'cash' && cashReceived ? Number(cashReceived) - grandTotal : 0;
 
@@ -69,7 +136,7 @@ const NewOrderPage = () => {
     }).filter(item => item.quantity > 0));
   };
 
-  const confirmOrder = () => {
+  const confirmOrder = async () => {
     let customer = { name: customerName, phone, address };
     if (orderType === 'dine-in') {
       customer = { name: `Mesa ${selectedTable}`, phone: '', address: '' };
@@ -78,23 +145,36 @@ const NewOrderPage = () => {
       customer = { name: customerName, phone, address: '' };
     }
 
-    // Add customer if new delivery customer
-    if (orderType === 'delivery' && !foundCustomer && phone) {
-      addCustomer({ name: customerName, phone, address, notes: customerNotes });
+    if (!foundCustomer && phone && customerName) {
+      addCustomer({ name: customerName, phone, address: address || '', notes: customerNotes || '' });
     }
 
-    const id = addOrder({
+    const actualPayment = paymentMethod === 'later' ? 'cash' : paymentMethod;
+    const isPaid = paymentMethod !== 'cash' && paymentMethod !== 'later';
+
+    const id = await addOrder({
       type: orderType!,
-      status: 'pending',
+      status: orderStatus,
       customer,
       tableNumber: selectedTable || undefined,
       items: cart,
       subtotal: cartTotal,
       deliveryFee: fee,
       total: grandTotal,
-      paymentMethod,
-      paymentStatus: paymentMethod === 'cash' ? 'pending' : 'paid',
+      paymentMethod: actualPayment as PaymentMethod,
+      paymentStatus: isPaid ? 'paid' : 'pending',
     });
+
+    // Assign driver if selected
+    if (selectedDriverId && id > 0) {
+      assignDriver(id, selectedDriverId);
+    }
+
+    // Upload receipt if provided
+    if (receiptPreview && id > 0) {
+      uploadReceipt(id, receiptPreview);
+    }
+
     setOrderSuccess(id);
   };
 
@@ -113,7 +193,7 @@ const NewOrderPage = () => {
           <button onClick={() => navigate('/orders')} className="px-6 py-2.5 rounded-lg border border-border text-sm font-medium hover:bg-muted transition-colors">
             Ver pedidos
           </button>
-          <button onClick={() => { setOrderSuccess(null); setStep('type'); setCart([]); setOrderType(null); }}
+          <button onClick={() => { setOrderSuccess(null); setStep('type'); setCart([]); setOrderType(null); setCustomerName(''); setPhone(''); setAddress(''); setCustomDeliveryFee('3000'); setReceiptFile(null); setReceiptPreview(null); setSelectedDriverId(null); setPaymentMethod('cash'); setOrderStatus('pending'); }}
             className="px-6 py-2.5 rounded-lg gradient-primary text-primary-foreground text-sm font-medium shadow-fab hover:opacity-90 transition-opacity">
             Nuevo pedido
           </button>
@@ -149,9 +229,9 @@ const NewOrderPage = () => {
       {step === 'type' && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {([
-            { type: 'delivery' as OrderType, emoji: '🏠', label: 'Domicilio', desc: 'Envío a dirección', color: 'border-destructive bg-destructive/5' },
-            { type: 'pickup' as OrderType, emoji: '🛍️', label: 'Recoger', desc: 'Cliente recoge', color: 'border-warning bg-warning/5' },
-            { type: 'dine-in' as OrderType, emoji: '🍽️', label: 'Mesa', desc: 'Comer en local', color: 'border-success bg-success/5' },
+            { type: 'delivery' as OrderType, emoji: '🏠', label: 'Domicilio', desc: 'Envío a dirección del cliente', color: 'border-destructive bg-destructive/5' },
+            { type: 'pickup' as OrderType, emoji: '🛍️', label: 'Recoger en restaurante', desc: 'El cliente viene a recoger', color: 'border-warning bg-warning/5' },
+            { type: 'dine-in' as OrderType, emoji: '🍽️', label: 'Comer aquí', desc: 'Se come en el local (mesa)', color: 'border-success bg-success/5' },
           ]).map(opt => (
             <button key={opt.type}
               onClick={() => { setOrderType(opt.type); setStep('customer'); }}
@@ -169,30 +249,68 @@ const NewOrderPage = () => {
         <div className="space-y-4 max-w-md">
           {orderType === 'delivery' && (
             <>
+              <div className="relative">
+                <label className="text-sm font-medium mb-1.5 block">Nombre</label>
+                <input value={customerName} onChange={e => handleNameSearch(e.target.value)} placeholder="Buscar por nombre o teléfono..."
+                  className="w-full px-4 py-3 rounded-lg border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
+                {customerSuggestions.length > 0 && !foundCustomer && (
+                  <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-elevated max-h-40 overflow-y-auto">
+                    {customerSuggestions.slice(0, 5).map(c => (
+                      <button key={c.id} type="button"
+                        onClick={() => { setCustomerName(c.name); setPhone(c.phone); setAddress(c.address); setCustomerNotes(c.notes); }}
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-muted transition-colors flex items-center gap-2 border-b border-border/50 last:border-0">
+                        <span className="font-medium">{c.name}</span>
+                        <span className="text-xs text-muted-foreground">{c.phone}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <div>
                 <label className="text-sm font-medium mb-1.5 block">Teléfono</label>
-                <input value={phone} onChange={e => {
-                  setPhone(e.target.value);
-                  const c = e.target.value.length >= 7 ? findCustomerByPhone(e.target.value) : undefined;
-                  if (c) { setCustomerName(c.name); setAddress(c.address); setCustomerNotes(c.notes); }
-                }}
+                <input value={phone} onChange={e => handlePhoneSearch(e.target.value)}
                   placeholder="300 123 4567" className="w-full px-4 py-3 rounded-lg border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
               </div>
               {foundCustomer && (
                 <div className="p-3 rounded-lg bg-success/10 border border-success/20 text-sm">
                   <span className="text-success font-medium">✅ Cliente encontrado: </span>{foundCustomer.name}
                   {foundCustomer.tag === 'frequent' && <span className="ml-2 px-2 py-0.5 rounded-full bg-warning/15 text-warning text-xs font-semibold">⭐ Frecuente</span>}
+                  {foundCustomer.notes && <p className="text-xs text-muted-foreground mt-1">📝 {foundCustomer.notes}</p>}
                 </div>
               )}
               <div>
-                <label className="text-sm font-medium mb-1.5 block">Nombre</label>
-                <input value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Nombre del cliente"
+                <label className="text-sm font-medium mb-1.5 block">Dirección</label>
+                <input value={address} onChange={e => setAddress(e.target.value)} placeholder="Dirección completa de entrega"
                   className="w-full px-4 py-3 rounded-lg border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
               </div>
               <div>
-                <label className="text-sm font-medium mb-1.5 block">Dirección</label>
-                <input value={address} onChange={e => setAddress(e.target.value)} placeholder="Dirección de entrega"
-                  className="w-full px-4 py-3 rounded-lg border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
+                <label className="text-sm font-medium mb-1.5 block">Costo del domicilio</label>
+                <input type="number" value={customDeliveryFee} onChange={e => setCustomDeliveryFee(e.target.value)} placeholder="3000"
+                  className="w-full px-4 py-3 rounded-lg border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-display" />
+                <p className="text-xs text-muted-foreground mt-1">Precio variable según la distancia</p>
+              </div>
+              {/* Driver assignment */}
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Domiciliario (opcional)</label>
+                {availableDrivers.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <button onClick={() => setSelectedDriverId(null)}
+                      className={cn('p-2.5 rounded-lg border-2 text-center text-xs font-medium transition-all',
+                        selectedDriverId === null ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30')}>
+                      Sin asignar
+                    </button>
+                    {availableDrivers.map(d => (
+                      <button key={d.id} onClick={() => setSelectedDriverId(d.id)}
+                        className={cn('p-2.5 rounded-lg border-2 text-left text-xs transition-all flex items-center gap-2',
+                          selectedDriverId === d.id ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30')}>
+                        <Truck size={14} className="text-success shrink-0" />
+                        <span className="font-medium truncate">{getDriverDisplayName(d)}</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground py-2">No hay domiciliarios disponibles. Puedes asignarlo después.</p>
+                )}
               </div>
             </>
           )}
@@ -238,31 +356,26 @@ const NewOrderPage = () => {
       {/* STEP: PRODUCTS */}
       {step === 'products' && (
         <div className="flex flex-col lg:flex-row gap-4">
-          <div className="flex-1">
-            {/* Search */}
+          <div className="flex-1 min-w-0">
             <div className="relative mb-3">
               <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Buscar producto..." className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
             </div>
-
-            {/* Categories */}
-            <div className="flex gap-2 overflow-x-auto pb-2 mb-3 scrollbar-hide">
+            <div className="flex gap-2 overflow-x-auto pb-2 mb-3 scrollbar-hide -mx-1 px-1 relative" style={{ maskImage: 'linear-gradient(to right, black 85%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to right, black 85%, transparent 100%)' }}>
               <button onClick={() => setSelectedCategory(null)}
-                className={cn('px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors',
+                className={cn('px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors shrink-0',
                   !selectedCategory ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80')}>
                 Todas
               </button>
               {categories.map(c => (
                 <button key={c.id} onClick={() => setSelectedCategory(c.id)}
-                  className={cn('px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors',
+                  className={cn('px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors shrink-0',
                     selectedCategory === c.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80')}>
                   {c.emoji} {c.name}
                 </button>
               ))}
             </div>
-
-            {/* Product grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {filteredProducts.map(p => {
                 const inCart = cart.find(i => i.productId === p.id);
@@ -274,7 +387,6 @@ const NewOrderPage = () => {
                     </div>
                     <p className="text-xs font-medium truncate">{p.name}</p>
                     <p className="text-sm font-display font-bold text-primary">{formatPrice(p.price)}</p>
-                    {p.description && <p className="text-[10px] text-muted-foreground">{p.description}</p>}
                     {inCart && (
                       <span className="absolute top-1 right-1 w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
                         {inCart.quantity}
@@ -285,15 +397,11 @@ const NewOrderPage = () => {
               })}
             </div>
           </div>
-
-          {/* Desktop cart sidebar */}
           <div className="hidden lg:block w-72 shrink-0">
             <CartPanel cart={cart} fee={fee} cartTotal={cartTotal} grandTotal={grandTotal}
               onRemove={removeFromCart} onUpdateQty={updateCartQty}
               onConfirm={() => setStep('summary')} orderType={orderType!} customerName={customerName} />
           </div>
-
-          {/* Mobile cart button */}
           {cartCount > 0 && (
             <button onClick={() => setShowCart(true)}
               className="lg:hidden fixed bottom-20 left-4 right-4 md:bottom-6 py-3 rounded-xl gradient-primary text-primary-foreground font-display font-semibold text-sm shadow-fab z-30 flex items-center justify-center gap-2">
@@ -313,21 +421,67 @@ const NewOrderPage = () => {
 
           <div>
             <label className="text-sm font-medium mb-2 block">Método de pago</label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className={cn('grid gap-2', orderType === 'dine-in' ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3')}>
               {([
-                { method: 'cash' as PaymentMethod, emoji: '💵', label: 'Efectivo' },
-                { method: 'transfer' as PaymentMethod, emoji: '📱', label: 'Transfer' },
-                { method: 'card' as PaymentMethod, emoji: '💳', label: 'Tarjeta' },
+                { method: 'cash' as const, emoji: '💵', label: 'Efectivo' },
+                { method: 'transfer' as const, emoji: '📱', label: 'Transferencia' },
+                { method: 'card' as const, emoji: '💳', label: 'Tarjeta' },
+                ...(orderType === 'dine-in' ? [{ method: 'later' as const, emoji: '⏳', label: 'Marcar después' }] : []),
               ]).map(pm => (
-                <button key={pm.method} onClick={() => setPaymentMethod(pm.method)}
+                <button key={pm.method} onClick={() => { setPaymentMethod(pm.method); setTransferAccount(''); setReceiptFile(null); setReceiptPreview(null); }}
                   className={cn('p-3 rounded-lg border-2 text-center text-sm font-medium transition-all',
                     paymentMethod === pm.method ? 'border-primary bg-primary/5' : 'border-border bg-card hover:border-primary/30')}>
                   <span className="text-xl block">{pm.emoji}</span>
-                  {pm.label}
+                  <span className="text-xs">{pm.label}</span>
                 </button>
               ))}
             </div>
+            {paymentMethod === 'later' && (
+              <p className="text-xs text-muted-foreground mt-2 p-2 rounded-lg bg-warning/10 border border-warning/20">
+                ⏳ El pedido quedará como <strong>no pagado</strong>. Podrás marcar el pago y el método desde el detalle del pedido cuando el cliente pague.
+              </p>
+            )}
           </div>
+
+          {/* Transfer sub-options */}
+          {paymentMethod === 'transfer' && (
+            <div className="space-y-3">
+              <label className="text-sm font-medium block">Cuenta de transferencia</label>
+              <div className="space-y-2">
+                {transferAccounts.map(acc => (
+                  <button key={acc.label} onClick={() => setTransferAccount(acc.label)}
+                    className={cn('w-full p-3 rounded-lg border-2 text-left text-sm transition-all flex items-center gap-3',
+                      transferAccount === acc.label ? 'border-primary bg-primary/5' : 'border-border bg-card hover:border-primary/30')}>
+                    <span className="text-xl">{acc.icon}</span>
+                    <div>
+                      <p className="font-semibold">{acc.label}</p>
+                      <p className="text-xs text-muted-foreground">{acc.detail}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Comprobante de pago</label>
+                <div className="relative">
+                  <input type="file" accept="image/*" onChange={handleReceiptUpload} className="hidden" id="receipt-upload" />
+                  <label htmlFor="receipt-upload"
+                    className="flex items-center justify-center gap-2 w-full py-3 rounded-lg border-2 border-dashed border-border text-sm text-muted-foreground cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-all">
+                    <Upload size={18} />
+                    {receiptFile ? receiptFile.name : 'Subir comprobante (foto)'}
+                  </label>
+                </div>
+                {receiptPreview && (
+                  <div className="mt-2 relative">
+                    <img src={receiptPreview} alt="Comprobante" className="w-full max-h-48 object-contain rounded-lg border border-border" />
+                    <button onClick={() => { setReceiptFile(null); setReceiptPreview(null); }}
+                      className="absolute top-1 right-1 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center">
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {paymentMethod === 'cash' && (
             <div>
@@ -339,6 +493,32 @@ const NewOrderPage = () => {
               )}
             </div>
           )}
+
+          {/* Order status on creation */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">Estado del pedido</label>
+            <div className="grid grid-cols-4 gap-2">
+              {([
+                { s: 'pending' as const, label: 'Pendiente', emoji: '🟡' },
+                { s: 'preparing' as const, label: 'Preparando', emoji: '🔵' },
+                { s: 'ready' as const, label: 'Listo', emoji: '🟢' },
+                ...(orderType === 'delivery' ? [
+                  { s: 'shipped' as const, label: 'Enviado', emoji: '🛵' },
+                  { s: 'delivered' as const, label: 'Entregado', emoji: '📦' },
+                ] : [
+                  { s: 'delivered' as const, label: orderType === 'pickup' ? 'Recogido' : 'Entregado en mesa', emoji: '✅' },
+                ]),
+              ]).map(opt => (
+                <button key={opt.s} onClick={() => setOrderStatus(opt.s)}
+                  className={cn('p-2 rounded-lg border-2 text-center text-xs font-medium transition-all',
+                    orderStatus === opt.s ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30')}>
+                  <span className="text-lg block">{opt.emoji}</span>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1">Si el pedido ya está listo o entregado, puedes marcarlo directamente aquí</p>
+          </div>
 
           <button onClick={confirmOrder} disabled={cart.length === 0}
             className="w-full py-3.5 rounded-xl gradient-primary text-primary-foreground font-display font-bold text-base shadow-fab disabled:opacity-40 hover:opacity-90 transition-opacity">
@@ -363,30 +543,23 @@ const NewOrderPage = () => {
                       <div>
                         <p className="font-display font-bold text-lg">{p.name}</p>
                         <p className="text-primary font-display font-bold">{formatPrice(p.price)}</p>
-                        {p.description && <p className="text-xs text-muted-foreground mt-0.5">{p.description}</p>}
                       </div>
-                      <button onClick={() => setShowProductModal(null)} className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                        <X size={16} />
-                      </button>
+                      <button onClick={() => setShowProductModal(null)} className="w-8 h-8 rounded-full bg-muted flex items-center justify-center"><X size={16} /></button>
                     </div>
-                    <div className="w-full h-24 rounded-xl mb-4 flex items-center justify-center text-5xl" style={{ backgroundColor: (cat?.color || '#6B7280') + '15' }}>
-                      {cat?.emoji}
-                    </div>
+                    <div className="w-full h-24 rounded-xl mb-4 flex items-center justify-center text-5xl" style={{ backgroundColor: (cat?.color || '#6B7280') + '15' }}>{cat?.emoji}</div>
                     <div className="space-y-3">
                       <div>
                         <label className="text-sm font-medium mb-1.5 block">Cantidad</label>
                         <div className="flex items-center gap-3">
-                          <button onClick={() => setModalQty(q => Math.max(1, q - 1))}
-                            className="w-10 h-10 rounded-lg border border-border flex items-center justify-center hover:bg-muted"><Minus size={16} /></button>
+                          <button onClick={() => setModalQty(q => Math.max(1, q - 1))} className="w-10 h-10 rounded-lg border border-border flex items-center justify-center hover:bg-muted"><Minus size={16} /></button>
                           <span className="font-display font-bold text-xl w-8 text-center">{modalQty}</span>
-                          <button onClick={() => setModalQty(q => q + 1)}
-                            className="w-10 h-10 rounded-lg border border-border flex items-center justify-center hover:bg-muted"><Plus size={16} /></button>
+                          <button onClick={() => setModalQty(q => q + 1)} className="w-10 h-10 rounded-lg border border-border flex items-center justify-center hover:bg-muted"><Plus size={16} /></button>
                         </div>
                       </div>
                       <div>
                         <label className="text-sm font-medium mb-1.5 block">Notas</label>
-                        <input value={modalNotes} onChange={e => setModalNotes(e.target.value)}
-                          placeholder="Ej: sin cebolla" className="w-full px-4 py-2.5 rounded-lg border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                        <input value={modalNotes} onChange={e => setModalNotes(e.target.value)} placeholder="Ej: sin cebolla"
+                          className="w-full px-4 py-2.5 rounded-lg border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-primary/20" />
                       </div>
                       <button onClick={() => addToCart(p.id)}
                         className="w-full py-3 rounded-lg gradient-primary text-primary-foreground font-display font-semibold text-sm shadow-fab hover:opacity-90 transition-opacity">

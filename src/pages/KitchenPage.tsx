@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const KitchenPage = () => {
+  const navigate = useNavigate();
   const { orders, updateOrderStatus } = useStore();
   const [now, setNow] = useState(Date.now());
 
@@ -35,11 +37,11 @@ const KitchenPage = () => {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="font-display font-bold text-2xl" style={{ color: '#F8FAFC' }}>👨‍🍳 Cocina</h1>
-          <p className="text-sm" style={{ color: 'rgba(248,250,252,0.5)' }}>{activeOrders.length} pedidos activos</p>
+          <p className="text-sm" style={{ color: 'rgba(248,250,252,0.5)' }}>{activeOrders.length} {activeOrders.length === 1 ? 'pedido activo' : 'pedidos activos'}</p>
         </div>
-        <a href="/dashboard" className="px-3 py-1.5 rounded-lg text-xs font-medium" style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(248,250,252,0.7)' }}>
+        <button onClick={() => navigate('/dashboard')} className="px-3 py-1.5 rounded-lg text-xs font-medium" style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(248,250,252,0.7)' }}>
           ← Volver
-        </a>
+        </button>
       </div>
 
       {activeOrders.length === 0 ? (

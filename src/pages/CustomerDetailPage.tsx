@@ -45,7 +45,7 @@ const CustomerDetailPage = () => {
       <div className="grid grid-cols-3 gap-2">
         <div className="bg-card rounded-xl border border-border p-3 text-center shadow-card">
           <p className="font-display font-bold text-lg">{customer.totalOrders}</p>
-          <p className="text-xs text-muted-foreground">pedidos</p>
+          <p className="text-xs text-muted-foreground">{customer.totalOrders === 1 ? 'pedido' : 'pedidos'}</p>
         </div>
         <div className="bg-card rounded-xl border border-border p-3 text-center shadow-card">
           <p className="font-display font-bold text-lg">{formatPrice(customer.totalSpent)}</p>
@@ -68,7 +68,7 @@ const CustomerDetailPage = () => {
                 className="w-full bg-card rounded-xl border border-border shadow-card p-3 text-left hover:shadow-elevated transition-shadow">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="font-display font-semibold text-sm">#{o.id}</span>
-                  <StatusBadge status={o.status} />
+                  <StatusBadge status={o.status} orderType={o.type} />
                   <span className="ml-auto text-xs text-muted-foreground">{formatDate(o.createdAt)} {formatTime(o.createdAt)}</span>
                 </div>
                 <p className="text-xs text-muted-foreground truncate">{o.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}</p>
