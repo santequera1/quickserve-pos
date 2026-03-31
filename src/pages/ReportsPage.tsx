@@ -171,8 +171,17 @@ const ReportsPage = () => {
   });
   const topCustomers = Object.values(customerMap).sort((a, b) => b.spent - a.spent).slice(0, 10);
 
-  // Top drivers (domiciliarios)
-  const driverMap: Record<number, { id: number; name: string; phone: string; orders: number; revenue: number }> = {};
+  // Top drivers (domiciliarios) - enhanced metrics
+  const driverMap: Record<number, {
+    id: number;
+    name: string;
+    phone: string;
+    orders: number;
+    deliveries: number;
+    revenue: number;
+    deliveryFees: number;
+    avgValue: number;
+  }> = {};
   validOrders.filter(o => o.driverId).forEach(o => {
     const d = drivers.find(dr => dr.id === o.driverId);
     if (!d) return;
@@ -180,11 +189,27 @@ const ReportsPage = () => {
     const role = parts.length === 2 ? parts[0] : 'domiciliario';
     if (role !== 'domiciliario') return;
     const displayName = parts.length === 2 ? parts[1] : d.name;
-    if (!driverMap[d.id]) driverMap[d.id] = { id: d.id, name: displayName, phone: d.phone, orders: 0, revenue: 0 };
+    if (!driverMap[d.id]) driverMap[d.id] = {
+      id: d.id,
+      name: displayName,
+      phone: d.phone,
+      orders: 0,
+      deliveries: 0,
+      revenue: 0,
+      deliveryFees: 0,
+      avgValue: 0
+    };
     driverMap[d.id].orders++;
+    if (o.type === 'delivery') driverMap[d.id].deliveries++;
     driverMap[d.id].revenue += o.total;
+    driverMap[d.id].deliveryFees += o.deliveryFee;
   });
-  const topDrivers = Object.values(driverMap).sort((a, b) => b.orders - a.orders);
+
+  // Calculate average value per delivery
+  Object.values(driverMap).forEach(driver => {
+    driver.avgValue = driver.deliveries > 0 ? Math.round(driver.revenue / driver.deliveries) : 0;
+  });
+  const topDrivers = Object.values(driverMap).sort((a, b) => b.deliveries - a.deliveries);
 
   // Available domiciliarios for filter
   const domiciliarios = drivers.filter(d => {
@@ -492,29 +517,49 @@ const ReportsPage = () => {
               <Truck size={16} className="text-success" /> Ranking de Domiciliarios
             </h3>
             {topDrivers.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              <div className="space-y-3">
                 {topDrivers.map((d, i) => {
-                  const maxOrders = topDrivers[0].orders;
-                  const pct = maxOrders > 0 ? (d.orders / maxOrders) * 100 : 0;
+                  const maxDeliveries = topDrivers[0].deliveries;
+                  const pct = maxDeliveries > 0 ? (d.deliveries / maxDeliveries) * 100 : 0;
                   return (
                     <div key={d.id} className="p-3 rounded-lg bg-muted/30 border border-border">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center text-sm font-display font-bold text-success shrink-0">
-                          {i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{d.name}</p>
-                          <p className="text-[10px] text-muted-foreground">{d.phone}</p>
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <div className="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center text-sm font-display font-bold text-success shrink-0">
+                            {i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold truncate">{d.name}</p>
+                            <p className="text-[10px] text-muted-foreground">{d.phone}</p>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 mb-1">
+
+                      {/* Progress bar */}
+                      <div className="flex items-center gap-2 mb-2">
                         <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
                           <div className="h-full rounded-full bg-success/60" style={{ width: `${pct}%` }} />
                         </div>
                       </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">{plural(d.orders, 'pedido')}</span>
-                        <span className="font-display font-semibold text-primary">{formatPrice(d.revenue)}</span>
+
+                      {/* Metrics grid */}
+                      <div className="grid grid-cols-4 gap-1 text-[10px]">
+                        <div className="text-center p-1.5 rounded bg-card/50">
+                          <p className="text-muted-foreground mb-0.5">Entregas</p>
+                          <p className="font-display font-bold text-lg text-success">{d.deliveries}</p>
+                        </div>
+                        <div className="text-center p-1.5 rounded bg-card/50">
+                          <p className="text-muted-foreground mb-0.5">Ingresos</p>
+                          <p className="font-display font-bold">{formatPrice(d.revenue)}</p>
+                        </div>
+                        <div className="text-center p-1.5 rounded bg-card/50">
+                          <p className="text-muted-foreground mb-0.5">Fees</p>
+                          <p className="font-display font-bold text-primary">{formatPrice(d.deliveryFees)}</p>
+                        </div>
+                        <div className="text-center p-1.5 rounded bg-card/50">
+                          <p className="text-muted-foreground mb-0.5">Promedio</p>
+                          <p className="font-display font-bold">{formatPrice(d.avgValue)}</p>
+                        </div>
                       </div>
                     </div>
                   );
