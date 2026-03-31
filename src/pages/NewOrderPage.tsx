@@ -40,7 +40,8 @@ const NewOrderPage = () => {
   const [cart, setCart] = useState<OrderItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | 'later'>('cash');
   const [cashReceived, setCashReceived] = useState('');
-  const [customDeliveryFee, setCustomDeliveryFee] = useState('3000');
+  const [customDeliveryFee, setCustomDeliveryFee] = useState('5000');
+  const [freeDelivery, setFreeDelivery] = useState(false);
   const [showProductModal, setShowProductModal] = useState<number | null>(null);
   const [modalQty, setModalQty] = useState(1);
   const [modalNotes, setModalNotes] = useState('');
@@ -109,7 +110,7 @@ const NewOrderPage = () => {
   const cartTotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
   const cartCount = cart.reduce((s, i) => s + i.quantity, 0);
   const isDelivery = orderType === 'delivery';
-  const fee = isDelivery ? Number(customDeliveryFee) || 0 : 0;
+  const fee = isDelivery ? (freeDelivery ? 0 : Number(customDeliveryFee) || 0) : 0;
   const grandTotal = cartTotal + fee;
   const change = paymentMethod === 'cash' && cashReceived ? Number(cashReceived) - grandTotal : 0;
 
@@ -193,7 +194,7 @@ const NewOrderPage = () => {
           <button onClick={() => navigate('/orders')} className="px-6 py-2.5 rounded-lg border border-border text-sm font-medium hover:bg-muted transition-colors">
             Ver pedidos
           </button>
-          <button onClick={() => { setOrderSuccess(null); setStep('type'); setCart([]); setOrderType(null); setCustomerName(''); setPhone(''); setAddress(''); setCustomDeliveryFee('3000'); setReceiptFile(null); setReceiptPreview(null); setSelectedDriverId(null); setPaymentMethod('cash'); setOrderStatus('pending'); }}
+          <button onClick={() => { setOrderSuccess(null); setStep('type'); setCart([]); setOrderType(null); setCustomerName(''); setPhone(''); setAddress(''); setCustomDeliveryFee('5000'); setFreeDelivery(false); setReceiptFile(null); setReceiptPreview(null); setSelectedDriverId(null); setPaymentMethod('cash'); setOrderStatus('pending'); }}
             className="px-6 py-2.5 rounded-lg gradient-primary text-primary-foreground text-sm font-medium shadow-fab hover:opacity-90 transition-opacity">
             Nuevo pedido
           </button>
@@ -285,9 +286,18 @@ const NewOrderPage = () => {
               </div>
               <div>
                 <label className="text-sm font-medium mb-1.5 block">Costo del domicilio</label>
-                <input type="number" value={customDeliveryFee} onChange={e => setCustomDeliveryFee(e.target.value)} placeholder="3000"
-                  className="w-full px-4 py-3 rounded-lg border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-display" />
-                <p className="text-xs text-muted-foreground mt-1">Precio variable según la distancia</p>
+                <div className="flex items-center gap-3 mb-2">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input type="checkbox" checked={freeDelivery} onChange={e => setFreeDelivery(e.target.checked)}
+                      className="w-4 h-4 cursor-pointer" />
+                    <span className="text-sm font-medium text-success">Domicilio gratis</span>
+                  </label>
+                </div>
+                {!freeDelivery && (
+                  <input type="number" value={customDeliveryFee} onChange={e => setCustomDeliveryFee(e.target.value)} placeholder="5000"
+                    className="w-full px-4 py-3 rounded-lg border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-display" />
+                )}
+                <p className="text-xs text-muted-foreground mt-1">{freeDelivery ? 'Sin costo de envío para este pedido' : 'Precio variable según la distancia'}</p>
               </div>
               {/* Driver assignment */}
               <div>

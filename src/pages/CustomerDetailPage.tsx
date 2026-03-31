@@ -20,6 +20,12 @@ const CustomerDetailPage = () => {
 
   const customerOrders = orders.filter(o => o.customer.phone === customer.phone);
 
+  // Calculate stats from live orders (not cached customer data)
+  const liveOrderCount = customerOrders.length;
+  const liveSpent = customerOrders.filter(o => o.status !== 'cancelled').reduce((s, o) => s + o.total, 0);
+  const lastOrderDate = customerOrders.length > 0 ? customerOrders[0].createdAt : '';
+  const liveTag = liveOrderCount > 5 ? 'frequent' : liveOrderCount > 0 ? 'regular' : 'new';
+
   return (
     <div className="max-w-lg mx-auto space-y-4">
       <div className="flex items-center gap-3">
@@ -32,7 +38,7 @@ const CustomerDetailPage = () => {
           <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-xl font-display font-bold text-primary">{customer.name[0]}</div>
           <div>
             <p className="font-display font-bold text-lg">{customer.name}</p>
-            {customer.tag === 'frequent' && <span className="px-2 py-0.5 rounded-full bg-warning/15 text-warning text-xs font-semibold">⭐ FRECUENTE</span>}
+            {liveTag === 'frequent' && <span className="px-2 py-0.5 rounded-full bg-warning/15 text-warning text-xs font-semibold">⭐ FRECUENTE</span>}
           </div>
         </div>
         <div className="space-y-1.5 text-sm text-muted-foreground">
@@ -44,15 +50,15 @@ const CustomerDetailPage = () => {
 
       <div className="grid grid-cols-3 gap-2">
         <div className="bg-card rounded-xl border border-border p-3 text-center shadow-card">
-          <p className="font-display font-bold text-lg">{customer.totalOrders}</p>
-          <p className="text-xs text-muted-foreground">{customer.totalOrders === 1 ? 'pedido' : 'pedidos'}</p>
+          <p className="font-display font-bold text-lg">{liveOrderCount}</p>
+          <p className="text-xs text-muted-foreground">{liveOrderCount === 1 ? 'pedido' : 'pedidos'}</p>
         </div>
         <div className="bg-card rounded-xl border border-border p-3 text-center shadow-card">
-          <p className="font-display font-bold text-lg">{formatPrice(customer.totalSpent)}</p>
+          <p className="font-display font-bold text-lg">{formatPrice(liveSpent)}</p>
           <p className="text-xs text-muted-foreground">total</p>
         </div>
         <div className="bg-card rounded-xl border border-border p-3 text-center shadow-card">
-          <p className="font-display font-bold text-lg">{formatDate(customer.lastOrder)}</p>
+          <p className="font-display font-bold text-lg">{lastOrderDate ? formatDate(lastOrderDate) : '-'}</p>
           <p className="text-xs text-muted-foreground">último</p>
         </div>
       </div>

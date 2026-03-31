@@ -30,6 +30,7 @@ const ReportsPage = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [driverFilter, setDriverFilter] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [excludeDeliveryFees, setExcludeDeliveryFees] = useState(false);
 
   // Filter orders by period (using Colombia timezone)
   const filtered = useMemo(() => {
@@ -84,18 +85,22 @@ const ReportsPage = () => {
 
   // Non-cancelled for revenue calc
   const validOrders = filtered.filter(o => o.status !== 'cancelled');
-  const totalSales = validOrders.reduce((s, o) => s + o.total, 0);
+  const getOrderValue = (o: Order) => excludeDeliveryFees ? o.total - o.deliveryFee : o.total;
+  const totalSales = validOrders.reduce((s, o) => s + getOrderValue(o), 0);
   const totalOrders = validOrders.length;
   const avgTicket = totalOrders > 0 ? Math.round(totalSales / totalOrders) : 0;
 
+  // Delivery fee total (always show real value)
+  const deliveryFeeTotal = validOrders.reduce((s, o) => s + o.deliveryFee, 0);
+
   // Payment totals
-  const cashTotal = validOrders.filter(o => o.paymentMethod === 'cash').reduce((s, o) => s + o.total, 0);
-  const transferTotal = validOrders.filter(o => o.paymentMethod === 'transfer').reduce((s, o) => s + o.total, 0);
-  const cardTotal = validOrders.filter(o => o.paymentMethod === 'card').reduce((s, o) => s + o.total, 0);
+  const cashTotal = validOrders.filter(o => o.paymentMethod === 'cash').reduce((s, o) => s + getOrderValue(o), 0);
+  const transferTotal = validOrders.filter(o => o.paymentMethod === 'transfer').reduce((s, o) => s + getOrderValue(o), 0);
+  const cardTotal = validOrders.filter(o => o.paymentMethod === 'card').reduce((s, o) => s + getOrderValue(o), 0);
 
   // Paid vs pending
-  const paidTotal = validOrders.filter(o => o.paymentStatus === 'paid').reduce((s, o) => s + o.total, 0);
-  const pendingPayment = validOrders.filter(o => o.paymentStatus === 'pending').reduce((s, o) => s + o.total, 0);
+  const paidTotal = validOrders.filter(o => o.paymentStatus === 'paid').reduce((s, o) => s + getOrderValue(o), 0);
+  const pendingPayment = validOrders.filter(o => o.paymentStatus === 'pending').reduce((s, o) => s + getOrderValue(o), 0);
 
   // Cancelled orders count and percentage
   const cancelledCount = filtered.filter(o => o.status === 'cancelled').length;
@@ -114,9 +119,6 @@ const ReportsPage = () => {
     const peakByCount = Object.entries(hours).reduce((max, [h, data]) => data.count > max[1].count ? [h, data] : max, ['8', hours[8]]);
     peakHour = { hour: Number(peakByCount[0]), count: peakByCount[1].count, sales: peakByCount[1].sales };
   }
-
-  // Delivery fee income
-  const deliveryFeeTotal = validOrders.reduce((s, o) => s + o.deliveryFee, 0);
 
   // Calculate previous period metrics for comparison
   const getPreviousPeriodOrders = () => {
@@ -173,7 +175,7 @@ const ReportsPage = () => {
 
   const prevFiltered = period !== 'custom' ? getPreviousPeriodOrders() : [];
   const prevValidOrders = prevFiltered.filter(o => o.status !== 'cancelled');
-  const prevTotalSales = prevValidOrders.reduce((s, o) => s + o.total, 0);
+  const prevTotalSales = prevValidOrders.reduce((s, o) => s + getOrderValue(o), 0);
   const prevTotalOrders = prevValidOrders.length;
   const prevAvgTicket = prevTotalOrders > 0 ? Math.round(prevTotalSales / prevTotalOrders) : 0;
 
@@ -203,7 +205,7 @@ const ReportsPage = () => {
       for (let h = 0; h < 24; h++) hours[h] = 0;
       validOrders.forEach(o => {
         const h = new Date(o.createdAt).getHours();
-        hours[h] += o.total;
+        hours[h] += getOrderValue(o);
       });
       return Object.entries(hours)
         .filter(([h]) => Number(h) >= 8 && Number(h) <= 23)
@@ -212,22 +214,22 @@ const ReportsPage = () => {
       const days: Record<string, number> = {};
       validOrders.forEach(o => {
         const d = getOrderDateStr(o.createdAt);
-        days[d] = (days[d] || 0) + o.total;
+        days[d] = (days[d] || 0) + getOrderValue(o);
       });
       return Object.entries(days)
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([d, total]) => ({ label: d.slice(5), ventas: total }));
     }
-  }, [validOrders, period]);
+  }, [validOrders, period, excludeDeliveryFees]);
 
   // By type
   const deliveryOrders = validOrders.filter(o => o.type === 'delivery');
   const pickupOrders = validOrders.filter(o => o.type === 'pickup');
   const dineInOrders = validOrders.filter(o => o.type === 'dine-in');
   const typeBreakdown = [
-    { name: 'Domicilio', emoji: '🏠', count: deliveryOrders.length, total: deliveryOrders.reduce((s, o) => s + o.total, 0), color: '#EF4444' },
-    { name: 'Recoger', emoji: '🛍️', count: pickupOrders.length, total: pickupOrders.reduce((s, o) => s + o.total, 0), color: '#F59E0B' },
-    { name: 'En mesa', emoji: '🍽️', count: dineInOrders.length, total: dineInOrders.reduce((s, o) => s + o.total, 0), color: '#10B981' },
+    { name: 'Domicilio', emoji: '🏠', count: deliveryOrders.length, total: deliveryOrders.reduce((s, o) => s + getOrderValue(o), 0), color: '#EF4444' },
+    { name: 'Recoger', emoji: '🛍️', count: pickupOrders.length, total: pickupOrders.reduce((s, o) => s + getOrderValue(o), 0), color: '#F59E0B' },
+    { name: 'En mesa', emoji: '🍽️', count: dineInOrders.length, total: dineInOrders.reduce((s, o) => s + getOrderValue(o), 0), color: '#10B981' },
   ];
 
   // Top customers
@@ -240,7 +242,13 @@ const ReportsPage = () => {
   });
   const topCustomers = Object.values(customerMap).sort((a, b) => b.spent - a.spent).slice(0, 10);
 
-  // Top drivers (domiciliarios) - enhanced metrics
+  // Available domiciliarios for filter
+  const domiciliarios = drivers.filter(d => {
+    const parts = d.name.split(':');
+    return (parts.length === 2 ? parts[0] : 'domiciliario') === 'domiciliario';
+  });
+
+  // All domiciliarios with their metrics
   const driverMap: Record<number, {
     id: number;
     name: string;
@@ -251,14 +259,11 @@ const ReportsPage = () => {
     deliveryFees: number;
     avgValue: number;
   }> = {};
-  validOrders.filter(o => o.driverId).forEach(o => {
-    const d = drivers.find(dr => dr.id === o.driverId);
-    if (!d) return;
-    const parts = d.name.split(':');
-    const role = parts.length === 2 ? parts[0] : 'domiciliario';
-    if (role !== 'domiciliario') return;
-    const displayName = parts.length === 2 ? parts[1] : d.name;
-    if (!driverMap[d.id]) driverMap[d.id] = {
+
+  // Initialize ALL domiciliarios (even those with 0 orders)
+  domiciliarios.forEach(d => {
+    const displayName = d.name.split(':')[1] || d.name;
+    driverMap[d.id] = {
       id: d.id,
       name: displayName,
       phone: d.phone,
@@ -268,10 +273,15 @@ const ReportsPage = () => {
       deliveryFees: 0,
       avgValue: 0
     };
-    driverMap[d.id].orders++;
-    if (o.type === 'delivery') driverMap[d.id].deliveries++;
-    driverMap[d.id].revenue += o.total;
-    driverMap[d.id].deliveryFees += o.deliveryFee;
+  });
+
+  // Fill in order data
+  validOrders.filter(o => o.driverId).forEach(o => {
+    if (!driverMap[o.driverId!]) return;
+    driverMap[o.driverId!].orders++;
+    if (o.type === 'delivery') driverMap[o.driverId!].deliveries++;
+    driverMap[o.driverId!].revenue += getOrderValue(o);
+    driverMap[o.driverId!].deliveryFees += o.deliveryFee;
   });
 
   // Calculate average value per delivery
@@ -279,12 +289,6 @@ const ReportsPage = () => {
     driver.avgValue = driver.deliveries > 0 ? Math.round(driver.revenue / driver.deliveries) : 0;
   });
   const topDrivers = Object.values(driverMap).sort((a, b) => b.deliveries - a.deliveries);
-
-  // Available domiciliarios for filter
-  const domiciliarios = drivers.filter(d => {
-    const parts = d.name.split(':');
-    return (parts.length === 2 ? parts[0] : 'domiciliario') === 'domiciliario';
-  });
 
   // Payment pie
   const paymentPie = [
@@ -352,6 +356,16 @@ const ReportsPage = () => {
           </div>
         )}
 
+        {/* Delivery fee toggle - always visible */}
+        <div className="flex items-center gap-2 pt-2 border-t border-border">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input type="checkbox" checked={excludeDeliveryFees} onChange={e => setExcludeDeliveryFees(e.target.checked)}
+              className="w-4 h-4 cursor-pointer" />
+            <span className="text-xs font-medium">Excluir valor de domicilios en totales</span>
+          </label>
+          <span className="text-[10px] text-muted-foreground">(el domicilio va para el domiciliario, no para el negocio)</span>
+        </div>
+
         {/* Advanced filters */}
         {showFilters && (
           <div className="flex gap-3 flex-wrap pt-2 border-t border-border">
@@ -400,7 +414,7 @@ const ReportsPage = () => {
                 })}
               </select>
             </div>
-            <button onClick={() => { setTypeFilter('all'); setPaymentFilter('all'); setStatusFilter('all'); setDriverFilter('all'); }}
+            <button onClick={() => { setTypeFilter('all'); setPaymentFilter('all'); setStatusFilter('all'); setDriverFilter('all'); setExcludeDeliveryFees(false); }}
               className="self-end px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
               Limpiar filtros
             </button>
@@ -419,7 +433,7 @@ const ReportsPage = () => {
           {/* SECTION 2: SUMMARY CARDS */}
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
             <div className="bg-card rounded-xl border border-border p-4 shadow-card">
-              <p className="text-xs text-muted-foreground mb-1">💰 Total vendido</p>
+              <p className="text-xs text-muted-foreground mb-1">💰 Total vendido {excludeDeliveryFees && <span className="text-warning">(sin domicilios)</span>}</p>
               <p className="font-display font-bold text-2xl text-primary">{formatPrice(totalSales)}</p>
               {period !== 'custom' && prevTotalSales > 0 && (
                 <p className={cn('text-[10px] font-semibold mt-1', salesChange >= 0 ? 'text-success' : 'text-destructive')}>
@@ -438,7 +452,7 @@ const ReportsPage = () => {
               )}
             </div>
             <div className="bg-card rounded-xl border border-border p-4 shadow-card">
-              <p className="text-xs text-muted-foreground mb-1">🎫 Ticket promedio</p>
+              <p className="text-xs text-muted-foreground mb-1">📊 Venta promedio</p>
               <p className="font-display font-bold text-2xl">{formatPrice(avgTicket)}</p>
               {period !== 'custom' && prevAvgTicket > 0 && (
                 <p className={cn('text-[10px] font-semibold mt-1', avgTicketChange >= 0 ? 'text-success' : 'text-destructive')}>
@@ -598,7 +612,7 @@ const ReportsPage = () => {
           {/* SECTION 5: TOP DRIVERS */}
           <div className="bg-card rounded-xl border border-border p-4 shadow-card">
             <h3 className="font-display font-semibold text-sm mb-3 flex items-center gap-2">
-              <Truck size={16} className="text-success" /> Ranking de Domiciliarios
+              <Truck size={16} className="text-success" /> Domiciliarios
             </h3>
             {topDrivers.length > 0 ? (
               <div className="space-y-3">
@@ -650,7 +664,7 @@ const ReportsPage = () => {
                 })}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">No hay pedidos con domiciliario asignado en este período</p>
+              <p className="text-sm text-muted-foreground text-center py-4">No hay domiciliarios registrados</p>
             )}
           </div>
 

@@ -214,8 +214,8 @@ function seedIfEmpty() {
 
   // Settings
   const insertSetting = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)');
-  insertSetting.run('deliveryFee', '3000');
-  insertSetting.run('tableCount', '12');
+  insertSetting.run('deliveryFee', '5000');
+  insertSetting.run('tableCount', '8');
   insertSetting.run('businessName', 'Comidas Rápidas Las Gaviotas');
   insertSetting.run('businessPhone', '3142211678');
   insertSetting.run('businessAddress', 'Cartagena de Indias');

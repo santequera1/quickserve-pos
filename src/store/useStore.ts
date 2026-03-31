@@ -134,8 +134,8 @@ export const useStore = create<AppState>((set, get) => ({
   customers: [],
   orders: [],
   drivers: [],
-  deliveryFee: 3000,
-  tableCount: 12,
+  deliveryFee: 5000,
+  tableCount: 8,
   initialized: false,
   sidebarCollapsed: false,
 
@@ -200,8 +200,8 @@ export const useStore = create<AppState>((set, get) => ({
         customers,
         orders,
         drivers,
-        deliveryFee: settings.deliveryFee || 3000,
-        tableCount: settings.tableCount || 12,
+        deliveryFee: settings.deliveryFee || 5000,
+        tableCount: settings.tableCount || 8,
         initialized: true,
       });
     } catch (err) {
