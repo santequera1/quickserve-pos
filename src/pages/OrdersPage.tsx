@@ -87,9 +87,10 @@ const OrdersPage = () => {
     return role === 'domiciliario' && d.available;
   });
 
-  // Summary based on current filtered orders
+  // Summary based on current filtered orders (excluding delivery fees)
   const summaryOrders = filtered.filter(o => o.status !== 'cancelled');
-  const summarySales = summaryOrders.reduce((sum, o) => sum + o.total, 0);
+  const summarySales = summaryOrders.reduce((sum, o) => sum + o.total - o.deliveryFee, 0);
+  const summaryDeliveryFees = summaryOrders.reduce((sum, o) => sum + o.deliveryFee, 0);
   const summaryDelivery = summaryOrders.filter(o => o.type === 'delivery').length;
   const summaryPickup = summaryOrders.filter(o => o.type === 'pickup').length;
   const summaryDineIn = summaryOrders.filter(o => o.type === 'dine-in').length;
@@ -172,21 +173,25 @@ const OrdersPage = () => {
       )}
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
         <div className="bg-card rounded-lg border border-border p-3">
           <p className="text-[10px] text-muted-foreground font-semibold mb-1">💰 Ventas</p>
           <p className="font-display font-bold text-lg text-primary">{formatPrice(summarySales)}</p>
+        </div>
+        <div className="bg-card rounded-lg border border-border p-3">
+          <p className="text-[10px] text-muted-foreground font-semibold mb-1">🛵 Domicilios</p>
+          <p className="font-display font-bold text-lg text-warning">{formatPrice(summaryDeliveryFees)}</p>
         </div>
         <div className="bg-card rounded-lg border border-border p-3">
           <p className="text-[10px] text-muted-foreground font-semibold mb-1">📦 Pedidos</p>
           <p className="font-display font-bold text-lg">{summaryOrders.length}</p>
         </div>
         <div className="bg-card rounded-lg border border-border p-3">
-          <p className="text-[10px] text-muted-foreground font-semibold mb-1">🏠 Dom. / 🛍️ Rec. / 🍽️ Rest.</p>
+          <p className="text-[10px] text-muted-foreground font-semibold mb-1">🏠 / 🛍️ / 🍽️</p>
           <p className="font-display font-bold text-lg">{summaryDelivery} / {summaryPickup} / {summaryDineIn}</p>
         </div>
         <div className="bg-card rounded-lg border border-border p-3">
-          <p className="text-[10px] text-muted-foreground font-semibold mb-1">📊 Venta promedio</p>
+          <p className="text-[10px] text-muted-foreground font-semibold mb-1">📊 Vta. prom.</p>
           <p className="font-display font-bold text-lg">{formatPrice(summaryAvg)}</p>
         </div>
       </div>

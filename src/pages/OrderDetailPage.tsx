@@ -321,21 +321,23 @@ const OrderDetailPage = () => {
 
       {/* WhatsApp notification (not for dine-in) */}
       {order.type !== 'dine-in' && order.customer.phone && (
-        (order.status === 'delivered' || order.status === 'shipped' || (order.status === 'ready' && order.type === 'pickup')) && (
-          <a href={`https://wa.me/57${order.customer.phone.replace(/\D/g, '')}?text=${encodeURIComponent(
-            order.status === 'shipped'
-              ? `¡Hola ${order.customer.name}! Tu pedido #${order.id} va en camino. Total: $${order.total.toLocaleString()}. ¡Gracias por tu compra!`
-              : order.status === 'ready' && order.type === 'pickup'
-              ? `¡Hola ${order.customer.name}! Tu pedido #${order.id} está listo para recoger en el restaurante. Total: $${order.total.toLocaleString()}. ¡Te esperamos!`
-              : `¡Hola ${order.customer.name}! Tu pedido #${order.id} ha sido entregado. Total: $${order.total.toLocaleString()}. ¡Gracias por tu compra!`
-          )}`} target="_blank" rel="noopener noreferrer"
-            className="w-full py-3 rounded-xl bg-[#25D366] text-white font-display font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
-            <MessageCircle size={18} />
-            {order.status === 'shipped' ? 'Avisar por WhatsApp: Pedido en camino' :
-             order.status === 'ready' ? 'Avisar por WhatsApp: Listo para recoger' :
-             'Avisar por WhatsApp: Pedido entregado'}
-          </a>
-        )
+        (order.status === 'delivered' || order.status === 'shipped' || (order.status === 'ready' && order.type === 'pickup')) && (() => {
+          const itemsList = order.items.map(i => `${i.quantity}x ${i.name}`).join(', ');
+          const msg = order.status === 'shipped'
+            ? `¡Hola ${order.customer.name}! Tu pedido (${itemsList}) va en camino. Total: $${order.total.toLocaleString()}. ¡Gracias por tu compra!`
+            : order.status === 'ready' && order.type === 'pickup'
+            ? `¡Hola ${order.customer.name}! Tu pedido (${itemsList}) está listo para recoger en el restaurante. Total: $${order.total.toLocaleString()}. ¡Te esperamos!`
+            : `¡Hola ${order.customer.name}! Tu pedido (${itemsList}) ha sido entregado. Total: $${order.total.toLocaleString()}. ¡Gracias por tu compra!`;
+          return (
+            <a href={`https://wa.me/57${order.customer.phone.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`} target="_blank" rel="noopener noreferrer"
+              className="w-full py-3 rounded-xl bg-[#25D366] text-white font-display font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+              <MessageCircle size={18} />
+              {order.status === 'shipped' ? 'Avisar por WhatsApp: En camino' :
+               order.status === 'ready' ? 'Avisar por WhatsApp: Listo para recoger' :
+               'Avisar por WhatsApp: Entregado'}
+            </a>
+          );
+        })()
       )}
 
       {/* Customer */}

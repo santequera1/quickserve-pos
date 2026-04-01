@@ -164,16 +164,12 @@ const NewOrderPage = () => {
       total: grandTotal,
       paymentMethod: actualPayment as PaymentMethod,
       paymentStatus: isPaid ? 'paid' : 'pending',
+      receiptImage: receiptPreview || undefined,
     });
 
     // Assign driver if selected
     if (selectedDriverId && id > 0) {
       assignDriver(id, selectedDriverId);
-    }
-
-    // Upload receipt if provided
-    if (receiptPreview && id > 0) {
-      uploadReceipt(id, receiptPreview);
     }
 
     setOrderSuccess(id);

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DollarSign, Package, Truck, Star, Plus, BarChart3, Calendar } from 'lucide-react';
+import { DollarSign, Package, Truck, Plus, BarChart3, Calendar } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { StatusBadge } from '@/components/StatusBadge';
 import { OrderTypeBadge } from '@/components/OrderTypeBadge';
@@ -35,33 +35,33 @@ const DashboardPage = () => {
   }, [orders, period]);
 
   const activeOrders = filteredOrders.filter(o => !['delivered', 'cancelled'].includes(o.status));
-  const completedOrders = filteredOrders.filter(o => o.status !== 'cancelled');
-  const todaySales = completedOrders.reduce((s, o) => s + o.total, 0);
+  const validOrders = filteredOrders.filter(o => o.status !== 'cancelled');
+  const deliveryFeeTotal = validOrders.reduce((s, o) => s + o.deliveryFee, 0);
+  const todaySales = validOrders.reduce((s, o) => s + o.total - o.deliveryFee, 0);
   const deliveryActive = filteredOrders.filter(o => o.type === 'delivery' && !['delivered', 'cancelled'].includes(o.status)).length;
   const urgentOrders = filteredOrders.filter(o => o.status === 'pending').length;
-  const avgTicket = completedOrders.length > 0 ? Math.round(todaySales / completedOrders.length) : 0;
+  const avgTicket = validOrders.length > 0 ? Math.round(todaySales / validOrders.length) : 0;
 
   // Top product
   const productCounts: Record<string, number> = {};
-  completedOrders.forEach(o => o.items.forEach(i => { productCounts[i.name] = (productCounts[i.name] || 0) + i.quantity; }));
+  validOrders.forEach(o => o.items.forEach(i => { productCounts[i.name] = (productCounts[i.name] || 0) + i.quantity; }));
   const topProduct = Object.entries(productCounts).sort((a, b) => b[1] - a[1])[0];
 
-  // By payment method — ONLY count paid orders (Bug #5)
-  const paidOrders = completedOrders.filter(o => o.paymentStatus === 'paid');
-  const cashTotal = paidOrders.filter(o => o.paymentMethod === 'cash').reduce((s, o) => s + o.total, 0);
-  const transferTotal = paidOrders.filter(o => o.paymentMethod === 'transfer').reduce((s, o) => s + o.total, 0);
-  const cardTotal = paidOrders.filter(o => o.paymentMethod === 'card').reduce((s, o) => s + o.total, 0);
-  const pendingPayment = completedOrders.filter(o => o.paymentStatus === 'pending').reduce((s, o) => s + o.total, 0);
+  // By payment method — ONLY count paid orders, exclude delivery fees
+  const paidOrders = validOrders.filter(o => o.paymentStatus === 'paid');
+  const cashTotal = paidOrders.filter(o => o.paymentMethod === 'cash').reduce((s, o) => s + o.total - o.deliveryFee, 0);
+  const transferTotal = paidOrders.filter(o => o.paymentMethod === 'transfer').reduce((s, o) => s + o.total - o.deliveryFee, 0);
+  const pendingPayment = validOrders.filter(o => o.paymentStatus === 'pending').reduce((s, o) => s + o.total - o.deliveryFee, 0);
 
   // Tables
   const tableOrders = orders.filter(o => o.type === 'dine-in' && o.tableNumber && !['delivered', 'cancelled'].includes(o.status));
   const occupiedTables = tableOrders.map(o => o.tableNumber!);
 
   const kpis = [
-    { label: 'Ventas', value: formatPrice(todaySales), sub: plural(completedOrders.length, 'pedido'), icon: DollarSign, color: 'text-success' },
+    { label: 'Ventas (sin domicilio)', value: formatPrice(todaySales), sub: plural(validOrders.length, 'pedido'), icon: DollarSign, color: 'text-success' },
     { label: 'Pedidos activos', value: activeOrders.length.toString(), sub: plural(urgentOrders, 'pendiente'), icon: Package, color: 'text-info' },
     { label: 'Venta promedio', value: formatPrice(avgTicket), sub: 'por pedido', icon: BarChart3, color: 'text-primary' },
-    { label: 'Más vendido', value: topProduct?.[0] || '-', sub: `x${topProduct?.[1] || 0}`, icon: Star, color: 'text-warning' },
+    { label: 'Domicilios cobrados', value: formatPrice(deliveryFeeTotal), sub: 'va para el domiciliario', icon: Truck, color: 'text-warning' },
   ];
 
   const periodLabel = period === 'today' ? 'Hoy' : period === 'week' ? 'Esta semana' : period === 'month' ? 'Este mes' : 'Todos';
@@ -102,7 +102,7 @@ const DashboardPage = () => {
       </div>
 
       {/* Mini reports: payment methods (only PAID) + pending */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-card rounded-xl p-3 shadow-card border border-border">
           <p className="text-[10px] text-muted-foreground uppercase font-semibold mb-1">💵 Efectivo</p>
           <p className="font-display font-bold text-sm">{formatPrice(cashTotal)}</p>
@@ -110,10 +110,6 @@ const DashboardPage = () => {
         <div className="bg-card rounded-xl p-3 shadow-card border border-border">
           <p className="text-[10px] text-muted-foreground uppercase font-semibold mb-1">📱 Transferencias</p>
           <p className="font-display font-bold text-sm">{formatPrice(transferTotal)}</p>
-        </div>
-        <div className="bg-card rounded-xl p-3 shadow-card border border-border">
-          <p className="text-[10px] text-muted-foreground uppercase font-semibold mb-1">💳 Tarjeta</p>
-          <p className="font-display font-bold text-sm">{formatPrice(cardTotal)}</p>
         </div>
         <div className="bg-card rounded-xl p-3 shadow-card border border-border">
           <p className="text-[10px] text-muted-foreground uppercase font-semibold mb-1">⏳ Pendiente cobro</p>

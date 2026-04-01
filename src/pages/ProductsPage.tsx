@@ -6,7 +6,11 @@ import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 
 const ProductsPage = () => {
-  const { categories, products, toggleProductAvailability, addProduct, updateProduct, deleteProduct } = useStore();
+  const { categories, products, toggleProductAvailability, addProduct, updateProduct, deleteProduct, addCategory } = useStore();
+  const [showCatForm, setShowCatForm] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatEmoji, setNewCatEmoji] = useState('');
+  const [newCatColor, setNewCatColor] = useState('#6B7280');
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -64,7 +68,43 @@ const ProductsPage = () => {
             {c.emoji} {c.name}
           </button>
         ))}
+        <button onClick={() => setShowCatForm(!showCatForm)}
+          className="px-2 py-1.5 rounded-full text-xs font-semibold bg-muted text-muted-foreground hover:text-primary shrink-0">
+          <Plus size={14} />
+        </button>
       </div>
+
+      {showCatForm && (
+        <div className="flex gap-2 items-end flex-wrap bg-card rounded-lg border border-border p-3">
+          <div>
+            <label className="text-[10px] text-muted-foreground block mb-0.5">Emoji</label>
+            <input value={newCatEmoji} onChange={e => setNewCatEmoji(e.target.value)} placeholder="🍔"
+              className="w-14 px-2 py-1.5 rounded-lg border border-input bg-card text-sm text-center outline-none" />
+          </div>
+          <div className="flex-1 min-w-[120px]">
+            <label className="text-[10px] text-muted-foreground block mb-0.5">Nombre</label>
+            <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="Nueva categoría"
+              className="w-full px-3 py-1.5 rounded-lg border border-input bg-card text-sm outline-none" />
+          </div>
+          <div>
+            <label className="text-[10px] text-muted-foreground block mb-0.5">Color</label>
+            <input type="color" value={newCatColor} onChange={e => setNewCatColor(e.target.value)}
+              className="w-10 h-8 rounded border border-input cursor-pointer" />
+          </div>
+          <button onClick={() => {
+            if (newCatName && newCatEmoji) {
+              addCategory({ name: newCatName, emoji: newCatEmoji, color: newCatColor });
+              setNewCatName(''); setNewCatEmoji(''); setNewCatColor('#6B7280'); setShowCatForm(false);
+            }
+          }} disabled={!newCatName || !newCatEmoji}
+            className="px-4 py-1.5 rounded-lg gradient-primary text-primary-foreground text-xs font-semibold disabled:opacity-40">
+            Crear
+          </button>
+          <button onClick={() => setShowCatForm(false)} className="px-3 py-1.5 rounded-lg border border-border text-xs hover:bg-muted">
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       {viewMode === 'grid' ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">

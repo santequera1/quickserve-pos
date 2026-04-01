@@ -65,7 +65,7 @@ router.get('/:id', (req, res) => {
 });
 
 router.post('/', (req, res) => {
-  const { type, status = 'pending', customer, tableNumber, items, subtotal, deliveryFee = 0, total, paymentMethod, paymentStatus = 'pending' } = req.body;
+  const { type, status = 'pending', customer, tableNumber, items, subtotal, deliveryFee = 0, total, paymentMethod, paymentStatus = 'pending', receiptImage } = req.body;
 
   if (!type || !customer || !items || !items.length || !paymentMethod) {
     return res.status(400).json({ error: 'Campos requeridos: type, customer, items, paymentMethod' });
@@ -74,14 +74,15 @@ router.post('/', (req, res) => {
   const db = getDb();
 
   const result = db.prepare(`
-    INSERT INTO orders (type, status, customer_name, customer_phone, customer_address, table_number, subtotal, delivery_fee, total, payment_method, payment_status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO orders (type, status, customer_name, customer_phone, customer_address, table_number, subtotal, delivery_fee, total, payment_method, payment_status, receipt_image)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     type, status,
     customer.name, customer.phone || null, customer.address || null,
     tableNumber || null,
     subtotal, deliveryFee, total,
-    paymentMethod, paymentStatus
+    paymentMethod, paymentStatus,
+    receiptImage || null
   );
 
   const orderId = result.lastInsertRowid;
