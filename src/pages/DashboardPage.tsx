@@ -207,9 +207,9 @@ const DashboardPage = () => {
         )}
       </div>
 
-      {/* FAB */}
+      {/* FAB - only desktop, mobile has bottom nav */}
       <button onClick={() => navigate('/orders/new')}
-        className="fixed bottom-20 right-4 md:bottom-6 w-14 h-14 rounded-full gradient-primary shadow-fab flex items-center justify-center text-primary-foreground z-30 hover:scale-105 transition-transform">
+        className="hidden md:flex fixed bottom-6 right-6 w-14 h-14 rounded-full gradient-primary shadow-fab items-center justify-center text-primary-foreground z-30 hover:scale-105 transition-transform">
         <Plus size={24} />
       </button>
     </div>

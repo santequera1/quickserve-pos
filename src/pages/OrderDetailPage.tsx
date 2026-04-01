@@ -447,10 +447,19 @@ const OrderDetailPage = () => {
       <div className="bg-card rounded-xl border border-border p-4 shadow-card">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase">Pago</h3>
-          {order.paymentStatus === 'pending' && (
+          {order.paymentStatus === 'pending' ? (
             <button onClick={() => setShowPaymentPicker(!showPaymentPicker)}
               className="text-xs text-primary font-medium flex items-center gap-1">
               <Edit2 size={12} /> Marcar pagado
+            </button>
+          ) : (
+            <button onClick={() => {
+              if (window.confirm('¿Marcar este pedido como NO pagado?')) {
+                updatePaymentStatus(order.id, 'pending');
+              }
+            }}
+              className="text-xs text-warning font-medium flex items-center gap-1">
+              <Edit2 size={12} /> Marcar no pagado
             </button>
           )}
         </div>

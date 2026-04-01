@@ -30,6 +30,8 @@ const NewOrderPage = () => {
 
   const [step, setStep] = useState<Step>(urlType ? 'customer' : 'type');
   const [orderType, setOrderType] = useState<OrderType | null>(urlType as OrderType | null);
+  // Pre-select "later" payment for dine-in from tables
+  const initialPayment = urlType === 'dine-in' ? 'later' as const : 'cash' as const;
   const [phone, setPhone] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [address, setAddress] = useState('');
@@ -38,7 +40,7 @@ const NewOrderPage = () => {
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState<OrderItem[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | 'later'>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | 'later'>(initialPayment);
   const [cashReceived, setCashReceived] = useState('');
   const [customDeliveryFee, setCustomDeliveryFee] = useState('5000');
   const [freeDelivery, setFreeDelivery] = useState(false);
@@ -52,6 +54,8 @@ const NewOrderPage = () => {
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [selectedDriverId, setSelectedDriverId] = useState<number | null>(null);
   const [orderStatus, setOrderStatus] = useState<'pending' | 'preparing' | 'ready' | 'shipped' | 'delivered'>('pending');
+  const [markAsPaid, setMarkAsPaid] = useState(true);
+  const [dineInCustomerName, setDineInCustomerName] = useState('');
 
   // Available domiciliarios only
   const availableDrivers = drivers.filter(d => {
@@ -140,7 +144,10 @@ const NewOrderPage = () => {
   const confirmOrder = async () => {
     let customer = { name: customerName, phone, address };
     if (orderType === 'dine-in') {
-      customer = { name: `Mesa ${selectedTable}`, phone: '', address: '' };
+      const mesaLabel = dineInCustomerName
+        ? `Mesa ${selectedTable} - ${dineInCustomerName}`
+        : `Mesa ${selectedTable}`;
+      customer = { name: mesaLabel, phone: '', address: '' };
     }
     if (orderType === 'pickup') {
       customer = { name: customerName, phone, address: '' };
@@ -151,7 +158,7 @@ const NewOrderPage = () => {
     }
 
     const actualPayment = paymentMethod === 'later' ? 'cash' : paymentMethod;
-    const isPaid = paymentMethod !== 'cash' && paymentMethod !== 'later';
+    const isPaid = paymentMethod === 'later' ? false : markAsPaid;
 
     const id = await addOrder({
       type: orderType!,
@@ -190,7 +197,7 @@ const NewOrderPage = () => {
           <button onClick={() => navigate('/orders')} className="px-6 py-2.5 rounded-lg border border-border text-sm font-medium hover:bg-muted transition-colors">
             Ver pedidos
           </button>
-          <button onClick={() => { setOrderSuccess(null); setStep('type'); setCart([]); setOrderType(null); setCustomerName(''); setPhone(''); setAddress(''); setCustomDeliveryFee('5000'); setFreeDelivery(false); setReceiptFile(null); setReceiptPreview(null); setSelectedDriverId(null); setPaymentMethod('cash'); setOrderStatus('pending'); }}
+          <button onClick={() => { setOrderSuccess(null); setStep('type'); setCart([]); setOrderType(null); setCustomerName(''); setPhone(''); setAddress(''); setCustomDeliveryFee('5000'); setFreeDelivery(false); setReceiptFile(null); setReceiptPreview(null); setSelectedDriverId(null); setPaymentMethod('cash'); setOrderStatus('pending'); setMarkAsPaid(true); setDineInCustomerName(''); }}
             className="px-6 py-2.5 rounded-lg gradient-primary text-primary-foreground text-sm font-medium shadow-fab hover:opacity-90 transition-opacity">
             Nuevo pedido
           </button>
@@ -231,7 +238,7 @@ const NewOrderPage = () => {
             { type: 'dine-in' as OrderType, emoji: '🍽️', label: 'Comer aquí', desc: 'Se come en el local (mesa)', color: 'border-success bg-success/5' },
           ]).map(opt => (
             <button key={opt.type}
-              onClick={() => { setOrderType(opt.type); setStep('customer'); }}
+              onClick={() => { setOrderType(opt.type); setStep('customer'); if (opt.type === 'dine-in') { setPaymentMethod('later'); setMarkAsPaid(false); } }}
               className={cn('p-6 rounded-xl border-2 text-center transition-all hover:shadow-elevated', opt.color)}>
               <span className="text-4xl block mb-2">{opt.emoji}</span>
               <p className="font-display font-bold text-lg">{opt.label}</p>
@@ -335,17 +342,25 @@ const NewOrderPage = () => {
             </>
           )}
           {orderType === 'dine-in' && (
-            <div>
-              <label className="text-sm font-medium mb-3 block">Selecciona la mesa</label>
-              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                {Array.from({ length: tableCount }, (_, i) => i + 1).map(n => (
-                  <button key={n}
-                    onClick={() => setSelectedTable(n)}
-                    className={cn('h-12 rounded-lg border-2 font-display font-bold text-sm transition-all',
-                      selectedTable === n ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:border-primary/50')}>
-                    {n}
-                  </button>
-                ))}
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-3 block">Selecciona la mesa</label>
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                  {Array.from({ length: tableCount }, (_, i) => i + 1).map(n => (
+                    <button key={n}
+                      onClick={() => setSelectedTable(n)}
+                      className={cn('h-12 rounded-lg border-2 font-display font-bold text-sm transition-all',
+                        selectedTable === n ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:border-primary/50')}>
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Nombre del cliente (opcional)</label>
+                <input value={dineInCustomerName} onChange={e => setDineInCustomerName(e.target.value)} placeholder="Ej: Stiven"
+                  className="w-full px-4 py-3 rounded-lg border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
+                <p className="text-xs text-muted-foreground mt-1">Se mostrará como "Mesa {selectedTable || '?'} - {dineInCustomerName || 'nombre'}"</p>
               </div>
             </div>
           )}
@@ -446,6 +461,13 @@ const NewOrderPage = () => {
               <p className="text-xs text-muted-foreground mt-2 p-2 rounded-lg bg-warning/10 border border-warning/20">
                 ⏳ El pedido quedará como <strong>no pagado</strong>. Podrás marcar el pago y el método desde el detalle del pedido cuando el cliente pague.
               </p>
+            )}
+            {paymentMethod !== 'later' && (
+              <label className="flex items-center gap-2 mt-2 cursor-pointer select-none">
+                <input type="checkbox" checked={markAsPaid} onChange={e => setMarkAsPaid(e.target.checked)}
+                  className="w-4 h-4 cursor-pointer" />
+                <span className="text-sm font-medium">{markAsPaid ? '✅ Marcado como pagado' : '⏳ Sin pagar'}</span>
+              </label>
             )}
           </div>
 
