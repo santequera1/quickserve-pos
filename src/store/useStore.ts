@@ -78,6 +78,7 @@ interface AppState {
   drivers: Driver[];
   deliveryFee: number;
   tableCount: number;
+  businessName: string;
   initialized: boolean;
   sidebarCollapsed: boolean;
 
@@ -106,7 +107,13 @@ interface AppState {
   // Products
   addProduct: (product: Omit<Product, 'id'>) => void;
   updateProduct: (id: number, data: Partial<Product>) => void;
+  deleteProduct: (id: number) => void;
   toggleProductAvailability: (id: number) => void;
+
+  // Categories
+  addCategory: (category: Omit<Category, 'id'>) => void;
+  updateCategory: (id: number, data: Partial<Category>) => void;
+  deleteCategory: (id: number) => void;
 
   // Customers
   addCustomer: (customer: Omit<Customer, 'id' | 'totalOrders' | 'totalSpent' | 'lastOrder' | 'tag'>) => void;
@@ -136,6 +143,7 @@ export const useStore = create<AppState>((set, get) => ({
   drivers: [],
   deliveryFee: 5000,
   tableCount: 8,
+  businessName: 'Las Gaviotas',
   initialized: false,
   sidebarCollapsed: false,
 
@@ -202,6 +210,7 @@ export const useStore = create<AppState>((set, get) => ({
         drivers,
         deliveryFee: settings.deliveryFee || 5000,
         tableCount: settings.tableCount || 8,
+        businessName: settings.businessName || 'Las Gaviotas',
         initialized: true,
       });
     } catch (err) {
@@ -314,6 +323,27 @@ export const useStore = create<AppState>((set, get) => ({
   toggleProductAvailability: (id) => {
     set(s => ({ products: s.products.map(p => p.id === id ? { ...p, available: !p.available } : p) }));
     api.toggleAvailability(id).catch(console.error);
+  },
+
+  deleteProduct: (id) => {
+    set(s => ({ products: s.products.filter(p => p.id !== id) }));
+    api.deleteProduct(id).catch(console.error);
+  },
+
+  addCategory: (category) => {
+    api.addCategory(category).then(created => {
+      set(s => ({ categories: [...s.categories, created] }));
+    }).catch(console.error);
+  },
+
+  updateCategory: (id, data) => {
+    set(s => ({ categories: s.categories.map(c => c.id === id ? { ...c, ...data } : c) }));
+    api.updateCategory(id, data).catch(console.error);
+  },
+
+  deleteCategory: (id) => {
+    set(s => ({ categories: s.categories.filter(c => c.id !== id) }));
+    api.deleteCategory(id).catch(console.error);
   },
 
   addCustomer: (customer) => {

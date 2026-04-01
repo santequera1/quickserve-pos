@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Phone, MapPin, FileText } from 'lucide-react';
+import { ArrowLeft, Phone, MapPin, FileText, MessageCircle } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { formatPrice, formatDate, formatTime } from '@/lib/format';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -46,6 +46,12 @@ const CustomerDetailPage = () => {
           <p className="flex items-center gap-2"><MapPin size={14} />{customer.address}</p>
           {customer.notes && <p className="flex items-center gap-2"><FileText size={14} />📝 {customer.notes}</p>}
         </div>
+        {customer.phone && (
+          <a href={`https://wa.me/57${customer.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"
+            className="mt-3 w-full py-2.5 rounded-lg bg-[#25D366] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+            <MessageCircle size={16} /> Escribir por WhatsApp
+          </a>
+        )}
       </div>
 
       <div className="grid grid-cols-3 gap-2">

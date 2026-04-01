@@ -65,4 +65,12 @@ router.patch('/:id/availability', requireRole('admin', 'cashier'), (req, res) =>
   res.json({ ...product, available: !!product.available });
 });
 
+router.delete('/:id', requireRole('admin'), (req, res) => {
+  const db = getDb();
+  const product = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id);
+  if (!product) return res.status(404).json({ error: 'Producto no encontrado' });
+  db.prepare('DELETE FROM products WHERE id = ?').run(req.params.id);
+  res.json({ success: true });
+});
+
 module.exports = router;

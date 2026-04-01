@@ -75,7 +75,7 @@ const DashboardPage = () => {
           { key: 'today' as const, label: 'Hoy' },
           { key: 'week' as const, label: 'Esta semana' },
           { key: 'month' as const, label: 'Este mes' },
-          { key: 'all' as const, label: 'Todos' },
+          { key: 'all' as const, label: 'Todo' },
         ]).map(d => (
           <button key={d.key} onClick={() => setPeriod(d.key)}
             className={cn('px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors',

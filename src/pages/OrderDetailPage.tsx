@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Phone, MapPin, Upload, X, Truck, Edit2, FileText, Image, Eye, UserPlus } from 'lucide-react';
+import { ArrowLeft, Phone, MapPin, Upload, X, Truck, Edit2, FileText, Image, Eye, UserPlus, MessageCircle } from 'lucide-react';
 import { useStore, type OrderStatus, type OrderType, type PaymentMethod, type Driver } from '@/store/useStore';
 import { StatusBadge, getDeliveredLabel } from '@/components/StatusBadge';
 import { OrderTypeBadge } from '@/components/OrderTypeBadge';
@@ -318,6 +318,25 @@ const OrderDetailPage = () => {
           </div>
         )}
       </div>
+
+      {/* WhatsApp notification (not for dine-in) */}
+      {order.type !== 'dine-in' && order.customer.phone && (
+        (order.status === 'delivered' || order.status === 'shipped' || (order.status === 'ready' && order.type === 'pickup')) && (
+          <a href={`https://wa.me/57${order.customer.phone.replace(/\D/g, '')}?text=${encodeURIComponent(
+            order.status === 'shipped'
+              ? `¡Hola ${order.customer.name}! Tu pedido #${order.id} va en camino. Total: $${order.total.toLocaleString()}. ¡Gracias por tu compra!`
+              : order.status === 'ready' && order.type === 'pickup'
+              ? `¡Hola ${order.customer.name}! Tu pedido #${order.id} está listo para recoger en el restaurante. Total: $${order.total.toLocaleString()}. ¡Te esperamos!`
+              : `¡Hola ${order.customer.name}! Tu pedido #${order.id} ha sido entregado. Total: $${order.total.toLocaleString()}. ¡Gracias por tu compra!`
+          )}`} target="_blank" rel="noopener noreferrer"
+            className="w-full py-3 rounded-xl bg-[#25D366] text-white font-display font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+            <MessageCircle size={18} />
+            {order.status === 'shipped' ? 'Avisar por WhatsApp: Pedido en camino' :
+             order.status === 'ready' ? 'Avisar por WhatsApp: Listo para recoger' :
+             'Avisar por WhatsApp: Pedido entregado'}
+          </a>
+        )
+      )}
 
       {/* Customer */}
       <div className="bg-card rounded-xl border border-border p-4 shadow-card">

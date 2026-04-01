@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Search, Plus, Grid3X3, List, X } from 'lucide-react';
+import { Search, Plus, Grid3X3, List, X, Trash2 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 
 const ProductsPage = () => {
-  const { categories, products, toggleProductAvailability, addProduct, updateProduct } = useStore();
+  const { categories, products, toggleProductAvailability, addProduct, updateProduct, deleteProduct } = useStore();
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -78,7 +78,11 @@ const ProductsPage = () => {
                 <p className="text-xs font-medium truncate">{p.name}</p>
                 <p className="text-sm font-display font-bold text-primary">{formatPrice(p.price)}</p>
                 <div className="flex items-center justify-between mt-2">
-                  <button onClick={() => openEdit(p.id)} className="text-xs text-primary font-medium">Editar</button>
+                  <div className="flex gap-2">
+                    <button onClick={() => openEdit(p.id)} className="text-xs text-primary font-medium">Editar</button>
+                    <button onClick={() => { if (window.confirm(`¿Eliminar "${p.name}"?`)) deleteProduct(p.id); }}
+                      className="text-xs text-destructive font-medium">Eliminar</button>
+                  </div>
                   <button onClick={() => toggleProductAvailability(p.id)}
                     className={cn('w-8 h-4 rounded-full relative transition-colors', p.available ? 'bg-success' : 'bg-muted')}>
                     <div className={cn('absolute top-0.5 w-3 h-3 rounded-full bg-card shadow transition-transform', p.available ? 'left-4' : 'left-0.5')} />
@@ -103,6 +107,8 @@ const ProductsPage = () => {
                 </div>
                 <span className="font-display font-bold text-sm">{formatPrice(p.price)}</span>
                 <button onClick={() => openEdit(p.id)} className="text-xs text-primary font-medium">Editar</button>
+                <button onClick={() => { if (window.confirm(`¿Eliminar "${p.name}"?`)) deleteProduct(p.id); }}
+                  className="text-destructive"><Trash2 size={14} /></button>
                 <button onClick={() => toggleProductAvailability(p.id)}
                   className={cn('w-8 h-4 rounded-full relative transition-colors shrink-0', p.available ? 'bg-success' : 'bg-muted')}>
                   <div className={cn('absolute top-0.5 w-3 h-3 rounded-full bg-card shadow transition-transform', p.available ? 'left-4' : 'left-0.5')} />

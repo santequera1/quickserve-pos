@@ -21,7 +21,7 @@ const navItems = [
 export const AppLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout, orders, sidebarCollapsed, toggleSidebar } = useStore();
+  const { user, logout, orders, sidebarCollapsed, toggleSidebar, businessName } = useStore();
   const pendingCount = orders.filter(o => o.status === 'pending').length;
   const [showNotifs, setShowNotifs] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -54,7 +54,7 @@ export const AppLayout = () => {
         <div className={cn('p-3 flex items-center gap-2', sidebarCollapsed ? 'flex-col' : '')}>
           <button onClick={() => navigate('/dashboard')} className={cn('flex items-center gap-2 flex-1 min-w-0', sidebarCollapsed && 'justify-center')}>
             <img src="/logo.webp" alt="Logo" className="w-8 h-8 rounded-md object-contain shrink-0" />
-            {!sidebarCollapsed && <span className="font-display font-bold text-sm whitespace-nowrap truncate">Las Gaviotas</span>}
+            {!sidebarCollapsed && <span className="font-display font-bold text-sm whitespace-nowrap truncate">{businessName}</span>}
           </button>
           <button onClick={toggleSidebar}
             className={cn('w-7 h-7 rounded-md hover:bg-sidebar-accent/50 flex items-center justify-center text-sidebar-foreground/60 hover:text-sidebar-foreground shrink-0',
@@ -139,7 +139,7 @@ export const AppLayout = () => {
       {/* Topbar */}
       <header className={cn('fixed top-0 right-0 left-0 h-14 bg-card border-b border-border z-30 flex items-center px-4 gap-3', 'md:left-16', headerML)}>
         <button onClick={() => navigate('/dashboard')} className="font-display font-semibold text-base flex-1 md:hidden flex items-center gap-2">
-          <img src="/logo.webp" alt="Logo" className="w-7 h-7 rounded-md object-contain" /> Las Gaviotas
+          <img src="/logo.webp" alt="Logo" className="w-7 h-7 rounded-md object-contain" /> {businessName}
         </button>
         <h1 className="font-display font-semibold text-base flex-1 hidden md:block capitalize">
           {navItems.find(n => location.pathname.startsWith(n.path))?.label || 'Dashboard'}

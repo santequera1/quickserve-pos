@@ -476,7 +476,7 @@ const ReportsPage = () => {
             {peakHour.count > 0 && (period === 'today' || period === 'yesterday') && (
               <div className="bg-card rounded-xl border border-border p-4 shadow-card">
                 <p className="text-xs text-muted-foreground mb-1">⏰ Hora pico</p>
-                <p className="font-display font-bold text-xl">{peakHour.hour}:00</p>
+                <p className="font-display font-bold text-xl">{peakHour.hour === 0 ? '12 AM' : peakHour.hour < 12 ? `${peakHour.hour} AM` : peakHour.hour === 12 ? '12 PM' : `${peakHour.hour - 12} PM`}</p>
                 <p className="text-[10px] text-muted-foreground">{peakHour.count} pedidos • {formatPrice(peakHour.sales)}</p>
               </div>
             )}

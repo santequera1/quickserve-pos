@@ -148,7 +148,7 @@ const OrdersPage = () => {
           { key: 'yesterday' as const, label: 'Ayer' },
           { key: 'week' as const, label: 'Esta semana' },
           { key: 'month' as const, label: 'Este mes' },
-          { key: 'all' as const, label: 'Todos' },
+          { key: 'all' as const, label: 'Todo' },
           { key: 'custom' as const, label: 'Rango' },
         ]).map(d => (
           <button key={d.key} onClick={() => setDateFilter(d.key)}

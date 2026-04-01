@@ -36,6 +36,9 @@ export const api = {
 
   // Categories
   getCategories: () => request<any[]>('/categories'),
+  addCategory: (data: any) => request<any>('/categories', { method: 'POST', body: JSON.stringify(data) }),
+  updateCategory: (id: number, data: any) => request<any>(`/categories/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteCategory: (id: number) => request<any>(`/categories/${id}`, { method: 'DELETE' }),
 
   // Products
   getProducts: (params?: { category?: number; search?: string }) => {
@@ -48,6 +51,7 @@ export const api = {
   addProduct: (data: any) => request<any>('/products', { method: 'POST', body: JSON.stringify(data) }),
   updateProduct: (id: number, data: any) => request<any>(`/products/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   toggleAvailability: (id: number) => request<any>(`/products/${id}/availability`, { method: 'PATCH' }),
+  deleteProduct: (id: number) => request<any>(`/products/${id}`, { method: 'DELETE' }),
 
   // Customers
   getCustomers: (search?: string) => {
