@@ -111,6 +111,13 @@ function migrateSchema() {
     db.exec("ALTER TABLE orders ADD COLUMN notes TEXT DEFAULT ''");
     console.log('✅ Added notes column to orders');
   }
+  // Add sizes column to products if it doesn't exist
+  try {
+    db.prepare("SELECT sizes FROM products LIMIT 1").get();
+  } catch {
+    db.exec("ALTER TABLE products ADD COLUMN sizes TEXT");
+    console.log('✅ Added sizes column to products');
+  }
 }
 
 function seedIfEmpty() {
@@ -122,140 +129,85 @@ function seedIfEmpty() {
   // Users
   const hash = (pw) => bcrypt.hashSync(pw, 10);
   const insertUser = db.prepare('INSERT INTO users (username, password, name, role) VALUES (?, ?, ?, ?)');
-  insertUser.run('admin', hash('admin123'), 'Administrador', 'admin');
+  insertUser.run('admin', hash('admin123'), 'Diógenes López', 'admin');
   insertUser.run('cajero', hash('cajero123'), 'Cajero', 'cashier');
   insertUser.run('cocina', hash('cocina123'), 'Cocina', 'kitchen');
 
   // Categories
   const insertCat = db.prepare('INSERT INTO categories (id, name, emoji, color) VALUES (?, ?, ?, ?)');
   const cats = [
-    [1, 'Pizzas Pequeñas', '🍕', '#B71515'],
-    [2, 'Pizzas Medianas', '🍕', '#D4620A'],
-    [3, 'Pizzas Grandes', '🍕', '#3B1A08'],
-    [4, 'Pizzas Extra Grande', '🍕', '#8B0000'],
-    [5, 'Porciones', '🍕', '#F5C518'],
-    [6, 'Picadas', '🍟', '#D97706'],
-    [7, 'Salchipapas', '🍟', '#EA580C'],
-    [8, 'Perros Calientes', '🌭', '#F59E0B'],
-    [9, 'Hamburguesas', '🍔', '#EF4444'],
-    [10, 'Salsas', '🫙', '#6B7280'],
+    [1, 'Pizzas', '🍕', '#B71515'],
+    [2, 'Porciones', '🍕', '#F5C518'],
+    [3, 'Picadas', '🍟', '#D97706'],
+    [4, 'Salchipapas', '🍟', '#EA580C'],
+    [5, 'Perros Calientes', '🌭', '#F59E0B'],
+    [6, 'Hamburguesas', '🍔', '#EF4444'],
+    [7, 'Salsas', '🫙', '#6B7280'],
   ];
   for (const c of cats) insertCat.run(...c);
 
-  // Products
-  const insertProd = db.prepare('INSERT INTO products (id, name, category_id, price, available, image, description) VALUES (?, ?, ?, ?, 1, ?, ?)');
+  // Products - pizzas have sizes JSON, others have single price
+  const insertProd = db.prepare('INSERT INTO products (id, name, category_id, price, available, image, description, sizes) VALUES (?, ?, ?, ?, 1, ?, ?, ?)');
+  const sz = (p, m, g, xl) => JSON.stringify([
+    { name: 'Pequeña (2 pers.)', price: p },
+    { name: 'Mediana (4 pers.)', price: m },
+    { name: 'Grande (6 pers.)', price: g },
+    { name: 'Extra Grande (7 pers.)', price: xl },
+  ]);
   const prods = [
-    // PIZZAS PEQUEÑAS (cat 1) - 8 porciones, 2 personas
-    [1, 'Tocineta y Maíz', 1, 27000, '/products/tocineta-y-maiz-pizza.webp', 'Tocineta ahumada, maíz tierno, queso y salsa napolitana'],
-    [2, 'Jamón y Queso', 1, 22000, '/products/jamon-y-queso-pizza.webp', 'Jamón, queso y salsa napolitana'],
-    [3, 'Pepperoni', 1, 28000, '/products/pepperonni.webp', 'Pepperoni, queso mozarella y salsa napolitana'],
-    [4, 'Hawaiana', 1, 24000, '/products/hawaiana-foto.webp', 'Jamón, queso, piña y salsa napolitana'],
-    [5, 'Salami', 1, 27000, '/products/salamiii.webp', 'Salami, queso mozarella y salsa napolitana'],
-    [6, 'Campesina', 1, 27000, '/products/campesina.webp', 'Jamón, cebolla, pimentón, maíz, aceitunas, champiñones'],
-    [7, 'Pollo y Champiñones', 1, 30000, '/products/pollo-y-champiñones.webp', 'Pollo, champiñones, cebolla, pimentón'],
-    [8, 'Pollo Tocineta y Maíz', 1, 30000, '/products/pollo-tocineta-y-maiz.webp', 'Pollo, tocineta, maíz, queso'],
-    [9, 'Chicharrón', 1, 30000, '/products/chicharron.webp', 'Chicharrón salpimentado, cebolla, queso cebollín'],
-    [10, 'Chorizo y Vegetales', 1, 27000, '/products/chorizo-y-vegetales.webp', 'Chorizo, cebolla, pimentón, maíz, queso'],
-    [11, 'Ranchera', 1, 30000, '/products/ranchera.webp', 'Salchicha ranchera, cebolla caramelizada, maíz'],
-    [12, 'Carbonara', 1, 30000, '/products/carbonara.webp', 'Salsa blanca, tocineta, cebolla, parmesano'],
-    [13, 'Camarones', 1, 33000, '/products/camarones.webp', 'Salsa blanca, camarones, champiñones al ajillo'],
-    [14, 'Pepperoni Meat', 1, 30000, '/products/ppepperoni-meat.webp', 'Pepperoni, trocitos de carne, queso'],
-    [15, 'Pepperoni Chicken', 1, 30000, '/products/peperoni-chicken.webp', 'Pepperoni, pollo salteado con cebolla'],
-    [16, 'Suprema', 1, 33000, '/products/suprema.webp', 'Camarones, tocineta, jamón, vegetales, salsa blanca'],
+    // PIZZAS (cat 1) - con tamaños
+    [1, 'Tocineta y Maíz', 1, 27000, '/products/tocineta-y-maiz-pizza.webp', 'Tocineta ahumada, maíz tierno, queso y salsa napolitana', sz(27000,43000,57000,61000)],
+    [2, 'Jamón y Queso', 1, 22000, '/products/jamon-y-queso-pizza.webp', 'Jamón, queso y salsa napolitana', sz(22000,38000,50000,54000)],
+    [3, 'Pepperoni', 1, 28000, '/products/pepperonni.webp', 'Pepperoni, queso mozarella y salsa napolitana', sz(28000,43000,57000,60000)],
+    [4, 'Hawaiana', 1, 24000, '/products/hawaiana-foto.webp', 'Jamón, queso, piña y salsa napolitana', sz(24000,41000,53000,57000)],
+    [5, 'Salami', 1, 27000, '/products/salamiii.webp', 'Salami, queso mozarella y salsa napolitana', sz(27000,40000,55000,59000)],
+    [6, 'Campesina', 1, 27000, '/products/campesina.webp', 'Jamón, cebolla, pimentón, maíz, aceitunas, champiñones', sz(27000,43000,57000,61000)],
+    [7, 'Pollo y Champiñones', 1, 30000, '/products/pollo-y-champinones.webp', 'Pollo, champiñones, cebolla, pimentón', sz(30000,45000,60000,64000)],
+    [8, 'Pollo Tocineta y Maíz', 1, 30000, '/products/pollo-tocineta-y-maiz.webp', 'Pollo, tocineta, maíz, queso', sz(30000,45000,60000,64000)],
+    [9, 'Chicharrón', 1, 30000, '/products/chicharron.webp', 'Chicharrón salpimentado, cebolla, queso cebollín', sz(30000,45000,57000,62000)],
+    [10, 'Chorizo y Vegetales', 1, 27000, '/products/chorizo-y-vegetales.webp', 'Chorizo, cebolla, pimentón, maíz, queso', sz(27000,43000,56000,60000)],
+    [11, 'Ranchera', 1, 30000, '/products/ranchera.webp', 'Salchicha ranchera, cebolla caramelizada, maíz', sz(30000,45000,60000,64000)],
+    [12, 'Carbonara', 1, 30000, '/products/carbonara.webp', 'Salsa blanca, tocineta, cebolla, parmesano', sz(30000,45000,58000,62000)],
+    [13, 'Camarones', 1, 33000, '/products/camarones.webp', 'Salsa blanca, camarones, champiñones al ajillo', sz(33000,48000,62000,67000)],
+    [14, 'Pepperoni Meat', 1, 30000, '/products/ppepperoni-meat.webp', 'Pepperoni, trocitos de carne, queso', sz(30000,45000,58000,64000)],
+    [15, 'Pepperoni Chicken', 1, 30000, '/products/peperoni-chicken.webp', 'Pepperoni, pollo salteado con cebolla', sz(30000,45000,58000,64000)],
+    [16, 'Suprema', 1, 33000, '/products/suprema.webp', 'Camarones, tocineta, jamón, vegetales, salsa blanca', sz(33000,50000,64000,69000)],
 
-    // PIZZAS MEDIANAS (cat 2) - 10 porciones, 4 personas
-    [17, 'Tocineta y Maíz', 2, 43000, '/products/tocineta-y-maiz-pizza.webp', null],
-    [18, 'Jamón y Queso', 2, 38000, '/products/jamon-y-queso-pizza.webp', null],
-    [19, 'Pepperoni', 2, 43000, '/products/pepperonni.webp', null],
-    [20, 'Hawaiana', 2, 41000, '/products/hawaiana-foto.webp', null],
-    [21, 'Salami', 2, 40000, '/products/salamiii.webp', null],
-    [22, 'Campesina', 2, 43000, '/products/campesina.webp', null],
-    [23, 'Pollo y Champiñones', 2, 45000, '/products/pollo-y-champiñones.webp', null],
-    [24, 'Pollo Tocineta y Maíz', 2, 45000, '/products/pollo-tocineta-y-maiz.webp', null],
-    [25, 'Chicharrón', 2, 45000, '/products/chicharron.webp', null],
-    [26, 'Chorizo y Vegetales', 2, 43000, '/products/chorizo-y-vegetales.webp', null],
-    [27, 'Ranchera', 2, 45000, '/products/ranchera.webp', null],
-    [28, 'Carbonara', 2, 45000, '/products/carbonara.webp', null],
-    [29, 'Camarones', 2, 48000, '/products/camarones.webp', null],
-    [30, 'Pepperoni Meat', 2, 45000, '/products/ppepperoni-meat.webp', null],
-    [31, 'Pepperoni Chicken', 2, 45000, '/products/peperoni-chicken.webp', null],
-    [32, 'Suprema', 2, 50000, '/products/suprema.webp', null],
+    // PORCIONES (cat 2)
+    [17, 'Porción Jamón', 2, 6000, null, null, null],
+    [18, 'Porción Hawaiana', 2, 6000, null, null, null],
+    [19, 'Porción Pepperoni', 2, 7000, null, null, null],
+    [20, 'Porción Salami', 2, 7000, null, null, null],
+    [21, 'Porción Enchulada', 2, 8000, null, null, null],
 
-    // PIZZAS GRANDES (cat 3) - 14 porciones, 6 personas
-    [33, 'Tocineta y Maíz', 3, 57000, '/products/tocineta-y-maiz-pizza.webp', null],
-    [34, 'Jamón y Queso', 3, 50000, '/products/jamon-y-queso-pizza.webp', null],
-    [35, 'Pepperoni', 3, 57000, '/products/pepperonni.webp', null],
-    [36, 'Hawaiana', 3, 53000, '/products/hawaiana-foto.webp', null],
-    [37, 'Salami', 3, 55000, '/products/salamiii.webp', null],
-    [38, 'Campesina', 3, 57000, '/products/campesina.webp', null],
-    [39, 'Pollo y Champiñones', 3, 60000, '/products/pollo-y-champiñones.webp', null],
-    [40, 'Pollo Tocineta y Maíz', 3, 60000, '/products/pollo-tocineta-y-maiz.webp', null],
-    [41, 'Chicharrón', 3, 57000, '/products/chicharron.webp', null],
-    [42, 'Chorizo y Vegetales', 3, 56000, '/products/chorizo-y-vegetales.webp', null],
-    [43, 'Ranchera', 3, 60000, '/products/ranchera.webp', null],
-    [44, 'Carbonara', 3, 58000, '/products/carbonara.webp', null],
-    [45, 'Camarones', 3, 62000, '/products/camarones.webp', null],
-    [46, 'Pepperoni Meat', 3, 58000, '/products/ppepperoni-meat.webp', null],
-    [47, 'Pepperoni Chicken', 3, 58000, '/products/peperoni-chicken.webp', null],
-    [48, 'Suprema', 3, 64000, '/products/suprema.webp', null],
+    // PICADAS (cat 3) - con tamaños
+    [22, 'Picada', 3, 22000, null, 'Papas, pollo/carne/cerdo, cebolla, pimentón, lechuga, aguacate, queso', JSON.stringify([{name:'Personal',price:22000},{name:'Para dos',price:36000},{name:'Familiar',price:75000}])],
 
-    // PIZZAS EXTRA GRANDE (cat 4) - 14 porciones, 7 personas
-    [49, 'Tocineta y Maíz', 4, 61000, '/products/tocineta-y-maiz-pizza.webp', null],
-    [50, 'Jamón y Queso', 4, 54000, '/products/jamon-y-queso-pizza.webp', null],
-    [51, 'Pepperoni', 4, 60000, '/products/pepperonni.webp', null],
-    [52, 'Hawaiana', 4, 57000, '/products/hawaiana-foto.webp', null],
-    [53, 'Salami', 4, 59000, '/products/salamiii.webp', null],
-    [54, 'Campesina', 4, 61000, '/products/campesina.webp', null],
-    [55, 'Pollo y Champiñones', 4, 64000, '/products/pollo-y-champiñones.webp', null],
-    [56, 'Pollo Tocineta y Maíz', 4, 64000, '/products/pollo-tocineta-y-maiz.webp', null],
-    [57, 'Chicharrón', 4, 62000, '/products/chicharron.webp', null],
-    [58, 'Chorizo y Vegetales', 4, 60000, '/products/chorizo-y-vegetales.webp', null],
-    [59, 'Ranchera', 4, 64000, '/products/ranchera.webp', null],
-    [60, 'Carbonara', 4, 62000, '/products/carbonara.webp', null],
-    [61, 'Camarones', 4, 67000, '/products/camarones.webp', null],
-    [62, 'Pepperoni Meat', 4, 64000, '/products/ppepperoni-meat.webp', null],
-    [63, 'Pepperoni Chicken', 4, 64000, '/products/peperoni-chicken.webp', null],
-    [64, 'Suprema', 4, 69000, '/products/suprema.webp', null],
+    // SALCHIPAPAS (cat 4) - con tamaños
+    [23, 'Salchipapa', 4, 15000, null, 'Papas francesas, salchichas, chorizo, lechuga, queso', JSON.stringify([{name:'Personal',price:15000},{name:'Para dos',price:25000},{name:'Familiar',price:50000}])],
 
-    // PORCIONES (cat 5)
-    [65, 'Porción Jamón', 5, 6000, null, null],
-    [66, 'Porción Hawaiana', 5, 6000, null, null],
-    [67, 'Porción Pepperoni', 5, 7000, null, null],
-    [68, 'Porción Salami', 5, 7000, null, null],
-    [69, 'Porción Enchulada', 5, 8000, null, null],
+    // PERROS CALIENTES (cat 5)
+    [24, 'Perro Super', 5, 13000, null, 'Salchicha super zenu, lechuga, papa ripio, cebolla, queso, salsas y maíz', null],
+    [25, 'Perro Ranchero', 5, 16000, null, 'Salchicha ranchera, cebolla caramelizada. Incluye papas', null],
+    [26, 'Choriperro', 5, 16000, null, 'Chorizo picante, cebolla caramelizada. Incluye papas', null],
+    [27, 'Perro Suizo', 5, 18000, null, 'Salchicha suiza, cebolla caramelizada. Incluye papas', null],
+    [28, 'Pepito', 5, 34000, null, 'Pan 30cm, carne, pollo, chorizo, cerdo, tocineta, maíz, aguacate', null],
 
-    // PICADAS (cat 6)
-    [70, 'Picada Personal', 6, 22000, null, 'Papas, pollo/carne/cerdo, cebolla, pimentón, lechuga, aguacate, queso'],
-    [71, 'Picada para Dos', 6, 36000, null, null],
-    [72, 'Picada Familiar', 6, 75000, null, null],
+    // HAMBURGUESAS (cat 6)
+    [29, 'Sencilla', 6, 17000, null, 'Carne de res, tomate, cebolla, lechuga, mozarella. Incluye papas', null],
+    [30, 'Doble Carne', 6, 20000, null, 'Doble carne de res, mozarella y cheddar. Incluye papas', null],
+    [31, 'Chuletón', 6, 18000, null, 'Chuleta ahumada, jamón, cebolla caramelizada, aguacate. Incluye papas', null],
+    [32, 'Queso y Tocineta', 6, 20000, null, 'Carne, tocineta, cebolla caramelizada, pepinillos, cheddar. Incluye papas', null],
+    [33, 'Chule Pollo', 6, 24000, null, 'Chuleta, pollo, jamón, aguacate, mozarella, cheddar. Incluye papas', null],
+    [34, 'Chule Carne', 6, 24000, null, 'Chuleta, carne, jamón, aguacate, mozarella, cheddar. Incluye papas', null],
+    [35, 'Caraqueña', 6, 20000, null, 'Carne, aguacate, queso amarillo, huevo, jamón. Incluye papas', null],
+    [36, 'La Diabla', 6, 26000, null, 'Carne, pollo, chuleta, huevo, tocineta, mozarella, cheddar. Incluye papas', null],
 
-    // SALCHIPAPAS (cat 7)
-    [73, 'Salchipapa Personal', 7, 15000, null, 'Papas francesas, salchichas, chorizo, lechuga, queso'],
-    [74, 'Salchipapa para Dos', 7, 25000, null, null],
-    [75, 'Salchipapa Familiar', 7, 50000, null, null],
-
-    // PERROS CALIENTES (cat 8)
-    [76, 'Perro Super', 8, 13000, null, 'Salchicha super zenu, lechuga, papa ripio, cebolla, queso, salsas y maíz'],
-    [77, 'Perro Ranchero', 8, 16000, null, 'Salchicha ranchera, cebolla caramelizada. Incluye papas'],
-    [78, 'Choriperro', 8, 16000, null, 'Chorizo picante, cebolla caramelizada. Incluye papas'],
-    [79, 'Perro Suizo', 8, 18000, null, 'Salchicha suiza, cebolla caramelizada. Incluye papas'],
-    [80, 'Pepito', 8, 34000, null, 'Pan 30cm, carne, pollo, chorizo, cerdo, tocineta, maíz, aguacate'],
-
-    // HAMBURGUESAS (cat 9)
-    [81, 'Sencilla', 9, 17000, null, 'Carne de res, tomate, cebolla, lechuga, mozarella. Incluye papas'],
-    [82, 'Doble Carne', 9, 20000, null, 'Doble carne de res, mozarella y cheddar. Incluye papas'],
-    [83, 'Chuletón', 9, 18000, null, 'Chuleta ahumada, jamón, cebolla caramelizada, aguacate. Incluye papas'],
-    [84, 'Queso y Tocineta', 9, 20000, null, 'Carne, tocineta, cebolla caramelizada, pepinillos, cheddar. Incluye papas'],
-    [85, 'Chule Pollo', 9, 24000, null, 'Chuleta, pollo, jamón, aguacate, mozarella, cheddar. Incluye papas'],
-    [86, 'Chule Carne', 9, 24000, null, 'Chuleta, carne, jamón, aguacate, mozarella, cheddar. Incluye papas'],
-    [87, 'Caraqueña', 9, 20000, null, 'Carne, aguacate, queso amarillo, huevo, jamón. Incluye papas'],
-    [88, 'La Diabla', 9, 26000, null, 'Carne, pollo, chuleta, huevo, tocineta, mozarella, cheddar. Incluye papas'],
-
-    // SALSAS (cat 10)
-    [89, 'Salsa Napolitana', 10, 2000, '/products/salsa.png', null],
-    [90, 'Salsa BBQ', 10, 2000, '/products/salsa.png', null],
-    [91, 'Salsa de Ajo', 10, 2000, '/products/salsa.png', null],
-    [92, 'Salsa Ranch', 10, 2000, '/products/salsa.png', null],
+    // SALSAS (cat 7)
+    [37, 'Salsa Napolitana', 7, 2000, '/products/salsa.png', null, null],
+    [38, 'Salsa BBQ', 7, 2000, '/products/salsa.png', null, null],
+    [39, 'Salsa de Ajo', 7, 2000, '/products/salsa.png', null, null],
+    [40, 'Salsa Ranch', 7, 2000, '/products/salsa.png', null, null],
   ];
   for (const p of prods) insertProd.run(...p);
 
@@ -293,13 +245,13 @@ function seedIfEmpty() {
   const iso = (minAgo) => new Date(now.getTime() - minAgo * 60000).toISOString().replace('T', ' ').slice(0, 19);
 
   insertOrder.run(1001, 'delivery', 'delivered', 'Laura Martínez', '3001234567', 'Urb. Jardines de Junio Mz 3', null, 43000, 5000, 48000, 'transfer', 'paid', iso(90));
-  insertItem.run(1001, 19, 'Pepperoni', 1, 43000, 'Mediana');
+  insertItem.run(1001, 3, 'Pepperoni (Mediana)', 1, 43000, '');
 
   insertOrder.run(1002, 'dine-in', 'preparing', 'Mesa 2', null, null, 2, 50000, 0, 50000, 'cash', 'pending', iso(10));
-  insertItem.run(1002, 32, 'Suprema', 1, 50000, 'Mediana');
+  insertItem.run(1002, 16, 'Suprema (Mediana)', 1, 50000, '');
 
   insertOrder.run(1003, 'pickup', 'ready', 'Carlos Rodríguez', '3109876543', null, null, 17000, 0, 17000, 'cash', 'paid', iso(20));
-  insertItem.run(1003, 81, 'Sencilla', 1, 17000, '');
+  insertItem.run(1003, 29, 'Sencilla', 1, 17000, '');
 
   console.log('✅ Database seeded successfully');
 }

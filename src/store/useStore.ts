@@ -13,6 +13,11 @@ export interface Category {
   color: string;
 }
 
+export interface ProductSize {
+  name: string;
+  price: number;
+}
+
 export interface Product {
   id: number;
   name: string;
@@ -21,6 +26,7 @@ export interface Product {
   available: boolean;
   image: string | null;
   description?: string;
+  sizes?: ProductSize[] | null;
 }
 
 export interface Customer {

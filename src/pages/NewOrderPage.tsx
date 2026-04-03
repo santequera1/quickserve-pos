@@ -9,9 +9,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 type Step = 'type' | 'customer' | 'products' | 'summary';
 
 const transferAccounts = [
-  { label: 'Nequi', detail: '3145843269', icon: '💜' },
-  { label: 'Daviplata', detail: '3145843269', icon: '🔴' },
-  { label: 'Bancolombia', detail: '3145843269', icon: '🏦' },
+  { label: 'Nequi', detail: '', icon: '💜' },
+  { label: 'Daviplata', detail: '', icon: '🔴' },
+  { label: 'Bancolombia', detail: '', icon: '🏦' },
 ];
 
 const getDriverDisplayName = (d: Driver) => {
@@ -47,6 +47,7 @@ const NewOrderPage = () => {
   const [showProductModal, setShowProductModal] = useState<number | null>(null);
   const [modalQty, setModalQty] = useState(1);
   const [modalNotes, setModalNotes] = useState('');
+  const [modalSize, setModalSize] = useState<string | null>(null);
   const [showCart, setShowCart] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState<number | null>(null);
   const [transferAccount, setTransferAccount] = useState('');
@@ -120,16 +121,21 @@ const NewOrderPage = () => {
 
   const addToCart = (productId: number) => {
     const p = products.find(pr => pr.id === productId)!;
+    const selectedSize = p.sizes && modalSize ? p.sizes.find(s => s.name === modalSize) : null;
+    const itemPrice = selectedSize ? selectedSize.price : p.price;
+    const itemName = selectedSize ? `${p.name} (${selectedSize.name})` : p.name;
+    const itemKey = `${productId}-${modalSize || ''}-${modalNotes}`;
     setCart(prev => {
-      const existing = prev.find(i => i.productId === productId && i.notes === modalNotes);
+      const existing = prev.find(i => i.productId === productId && `${productId}-${i.name.includes('(') ? i.name.split('(')[1]?.replace(')','') : ''}-${i.notes}` === itemKey);
       if (existing) {
         return prev.map(i => i === existing ? { ...i, quantity: i.quantity + modalQty } : i);
       }
-      return [...prev, { productId, name: p.name, quantity: modalQty, price: p.price, notes: modalNotes }];
+      return [...prev, { productId, name: itemName, quantity: modalQty, price: itemPrice, notes: modalNotes }];
     });
     setShowProductModal(null);
     setModalQty(1);
     setModalNotes('');
+    setModalSize(null);
   };
 
   const removeFromCart = (index: number) => setCart(c => c.filter((_, i) => i !== index));
@@ -404,14 +410,14 @@ const NewOrderPage = () => {
                   <button key={p.id} onClick={() => { setShowProductModal(p.id); setModalQty(1); setModalNotes(''); }}
                     className="bg-card rounded-xl p-3 border border-border shadow-card text-left hover:shadow-elevated transition-shadow relative">
                     {p.image ? (
-                      <img src={p.image} alt={p.name} className="w-full h-20 rounded-lg mb-2 object-cover" />
+                      <img src={p.image} alt={p.name} className="w-full aspect-square rounded-lg mb-2 object-cover" />
                     ) : (
                       <div className="w-full h-16 rounded-lg mb-2 flex items-center justify-center text-3xl" style={{ backgroundColor: categories.find(c => c.id === p.categoryId)?.color + '15' }}>
                         {categories.find(c => c.id === p.categoryId)?.emoji}
                       </div>
                     )}
                     <p className="text-xs font-medium truncate">{p.name}</p>
-                    <p className="text-sm font-display font-bold text-primary">{formatPrice(p.price)}</p>
+                    <p className="text-sm font-display font-bold text-primary">{p.sizes ? `Desde ${formatPrice(p.price)}` : formatPrice(p.price)}</p>
                     {inCart && (
                       <span className="absolute top-1 right-1 w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
                         {inCart.quantity}
@@ -569,17 +575,42 @@ const NewOrderPage = () => {
               {(() => {
                 const p = products.find(pr => pr.id === showProductModal)!;
                 const cat = categories.find(c => c.id === p.categoryId);
+                const hasSizes = p.sizes && p.sizes.length > 0;
+                const selectedSizeObj = hasSizes && modalSize ? p.sizes!.find(s => s.name === modalSize) : null;
+                const currentPrice = selectedSizeObj ? selectedSizeObj.price : p.price;
                 return (
                   <>
                     <div className="flex justify-between items-start mb-3">
                       <div>
                         <p className="font-display font-bold text-lg">{p.name}</p>
-                        <p className="text-primary font-display font-bold">{formatPrice(p.price)}</p>
+                        {p.description && <p className="text-xs text-muted-foreground mt-0.5">{p.description}</p>}
+                        <p className="text-primary font-display font-bold mt-1">
+                          {hasSizes ? (modalSize ? formatPrice(currentPrice) : `Desde ${formatPrice(p.price)}`) : formatPrice(p.price)}
+                        </p>
                       </div>
-                      <button onClick={() => setShowProductModal(null)} className="w-8 h-8 rounded-full bg-muted flex items-center justify-center"><X size={16} /></button>
+                      <button onClick={() => setShowProductModal(null)} className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0"><X size={16} /></button>
                     </div>
-                    <div className="w-full h-24 rounded-xl mb-4 flex items-center justify-center text-5xl" style={{ backgroundColor: (cat?.color || '#6B7280') + '15' }}>{cat?.emoji}</div>
+                    {p.image ? (
+                      <img src={p.image} alt={p.name} className="w-full h-40 rounded-xl mb-4 object-cover" />
+                    ) : (
+                      <div className="w-full h-24 rounded-xl mb-4 flex items-center justify-center text-5xl" style={{ backgroundColor: (cat?.color || '#6B7280') + '15' }}>{cat?.emoji}</div>
+                    )}
                     <div className="space-y-3">
+                      {hasSizes && (
+                        <div>
+                          <label className="text-sm font-medium mb-1.5 block">Tamaño</label>
+                          <div className="grid grid-cols-2 gap-2">
+                            {p.sizes!.map(s => (
+                              <button key={s.name} onClick={() => setModalSize(s.name)}
+                                className={cn('p-2.5 rounded-lg border-2 text-center text-xs font-medium transition-all',
+                                  modalSize === s.name ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30')}>
+                                <p className="font-semibold">{s.name}</p>
+                                <p className="font-display font-bold text-primary">{formatPrice(s.price)}</p>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       <div>
                         <label className="text-sm font-medium mb-1.5 block">Cantidad</label>
                         <div className="flex items-center gap-3">
@@ -594,8 +625,9 @@ const NewOrderPage = () => {
                           className="w-full px-4 py-2.5 rounded-lg border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-primary/20" />
                       </div>
                       <button onClick={() => addToCart(p.id)}
-                        className="w-full py-3 rounded-lg gradient-primary text-primary-foreground font-display font-semibold text-sm shadow-fab hover:opacity-90 transition-opacity">
-                        Agregar al pedido • {formatPrice(p.price * modalQty)}
+                        disabled={hasSizes && !modalSize}
+                        className="w-full py-3 rounded-lg gradient-primary text-primary-foreground font-display font-semibold text-sm shadow-fab hover:opacity-90 transition-opacity disabled:opacity-40">
+                        {hasSizes && !modalSize ? 'Selecciona un tamaño' : `Agregar al pedido • ${formatPrice(currentPrice * modalQty)}`}
                       </button>
                     </div>
                   </>

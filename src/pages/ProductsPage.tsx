@@ -113,14 +113,14 @@ const ProductsPage = () => {
             return (
               <div key={p.id} className={cn('bg-card rounded-xl border border-border shadow-card p-3', !p.available && 'opacity-50')}>
                 {p.image ? (
-                  <img src={p.image} alt={p.name} className="w-full h-20 rounded-lg mb-2 object-cover" />
+                  <img src={p.image} alt={p.name} className="w-full aspect-square rounded-lg mb-2 object-cover" />
                 ) : (
-                  <div className="w-full h-16 rounded-lg mb-2 flex items-center justify-center text-3xl" style={{ backgroundColor: (cat?.color || '#6B7280') + '15' }}>
+                  <div className="w-full h-20 rounded-lg mb-2 flex items-center justify-center text-3xl" style={{ backgroundColor: (cat?.color || '#6B7280') + '15' }}>
                     {cat?.emoji}
                   </div>
                 )}
                 <p className="text-xs font-medium truncate">{p.name}</p>
-                <p className="text-sm font-display font-bold text-primary">{formatPrice(p.price)}</p>
+                <p className="text-sm font-display font-bold text-primary">{p.sizes ? `Desde ${formatPrice(p.price)}` : formatPrice(p.price)}</p>
                 <div className="flex items-center justify-between mt-2">
                   <div className="flex gap-2">
                     <button onClick={() => openEdit(p.id)} className="text-xs text-primary font-medium">Editar</button>
@@ -153,7 +153,7 @@ const ProductsPage = () => {
                   <p className="text-sm font-medium truncate">{p.name}</p>
                   <p className="text-xs text-muted-foreground">{cat?.name}</p>
                 </div>
-                <span className="font-display font-bold text-sm">{formatPrice(p.price)}</span>
+                <span className="font-display font-bold text-sm">{p.sizes ? `Desde ${formatPrice(p.price)}` : formatPrice(p.price)}</span>
                 <button onClick={() => openEdit(p.id)} className="text-xs text-primary font-medium">Editar</button>
                 <button onClick={() => { if (window.confirm(`¿Eliminar "${p.name}"?`)) deleteProduct(p.id); }}
                   className="text-destructive"><Trash2 size={14} /></button>

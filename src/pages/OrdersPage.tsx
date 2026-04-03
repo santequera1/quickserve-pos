@@ -309,6 +309,17 @@ const OrdersPage = () => {
         </div>
       )}
 
+      {/* Select all button */}
+      {filtered.length > 0 && (
+        <div className="flex items-center gap-2">
+          <button onClick={toggleSelectAll}
+            className="px-3 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-muted flex items-center gap-1.5">
+            <CheckSquare2 size={14} />
+            {selectedOrders.size === filtered.length ? 'Deseleccionar todos' : `Seleccionar todos (${filtered.length})`}
+          </button>
+        </div>
+      )}
+
       {/* Orders */}
       {filtered.length === 0 ? (
         <div className="text-center py-12">
