@@ -42,7 +42,7 @@ const LoginPage = () => {
       <div className="w-full max-w-sm relative z-10">
         <div className="rounded-2xl p-8 backdrop-blur-xl" style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}>
           <div className="text-center mb-8">
-            <img src="/logo.png" alt="Pizza Pizza" className="w-28 h-28 mx-auto mb-3 rounded-2xl object-contain" />
+            <img src="/logo.png" alt="Pizza Pizza" className="w-36 h-36 mx-auto mb-3 rounded-2xl object-contain" />
             <h1 className="font-display text-2xl font-bold" style={{ color: 'white' }}>Pizza Pizza</h1>
             <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.6)' }}>Sistema de pedidos</p>
           </div>

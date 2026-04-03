@@ -101,10 +101,10 @@ const CustomersPage = () => {
                     {c.address && <span className="flex items-center gap-1 truncate"><MapPin size={12} />{c.address}</span>}
                   </div>
                 </div>
-                <div className="text-right shrink-0 flex items-center gap-1">
-                  <div className="mr-1">
-                    <p className="text-xs text-muted-foreground">{plural(c.totalOrders, 'pedido')}</p>
-                    <p className="font-display font-semibold text-sm">{formatPrice(c.totalSpent)}</p>
+                <div className="shrink-0 flex items-center gap-1">
+                  <div className="mr-1 text-right">
+                    <p className="text-[10px] text-muted-foreground whitespace-nowrap">{plural(c.totalOrders, 'pedido')}</p>
+                    <p className="font-display font-semibold text-xs whitespace-nowrap">{formatPrice(c.totalSpent)}</p>
                   </div>
                   {c.phone && (
                     <a href={`https://wa.me/57${c.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"

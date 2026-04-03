@@ -25,8 +25,8 @@ const TablesPage = () => {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
           <h2 className="font-display font-bold text-lg">Mesas</h2>
           <p className="text-xs text-muted-foreground">
             <span className="text-success font-semibold">{tableCount - occupiedTables.size} libres</span>
@@ -37,8 +37,8 @@ const TablesPage = () => {
           </p>
         </div>
         <button onClick={() => navigate('/orders/new')}
-          className="px-4 py-2.5 rounded-lg gradient-primary text-primary-foreground text-sm font-semibold shadow-fab hover:opacity-90 flex items-center gap-2">
-          <Plus size={16} /> Nuevo pedido
+          className="px-4 py-2.5 rounded-lg gradient-primary text-primary-foreground text-sm font-semibold shadow-fab hover:opacity-90 flex items-center gap-2 shrink-0">
+          <Plus size={16} /> <span className="hidden sm:inline">Nuevo pedido</span><span className="sm:hidden">Nuevo</span>
         </button>
       </div>
 
@@ -64,7 +64,7 @@ const TablesPage = () => {
                 Mesa {n}
               </p>
               {order ? (
-                <div className="mt-1">
+                <div className="mt-1 flex flex-col items-center">
                   <StatusBadge status={order.status} orderType={order.type} />
                   <p className="text-[10px] text-muted-foreground mt-1">#{order.id} • {formatPrice(order.total)}</p>
                 </div>

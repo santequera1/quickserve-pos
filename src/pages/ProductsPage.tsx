@@ -16,7 +16,7 @@ const ProductsPage = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [formData, setFormData] = useState({ name: '', description: '', price: '', categoryId: 1, available: true });
+  const [formData, setFormData] = useState({ name: '', description: '', price: '', categoryId: 1, available: true, sizes: [] as { name: string; price: number }[] });
 
   const filtered = products.filter(p => {
     if (selectedCategory && p.categoryId !== selectedCategory) return false;
@@ -26,13 +26,14 @@ const ProductsPage = () => {
 
   const openEdit = (id: number) => {
     const p = products.find(pr => pr.id === id)!;
-    setFormData({ name: p.name, description: p.description || '', price: String(p.price), categoryId: p.categoryId, available: p.available });
+    setFormData({ name: p.name, description: p.description || '', price: String(p.price), categoryId: p.categoryId, available: p.available, sizes: p.sizes ? [...p.sizes] : [] });
     setEditingId(id);
     setShowForm(true);
   };
 
   const handleSave = () => {
-    const data = { name: formData.name, description: formData.description, price: Number(formData.price), categoryId: formData.categoryId, available: formData.available, image: null };
+    const data: any = { name: formData.name, description: formData.description, price: Number(formData.price), categoryId: formData.categoryId, available: formData.available };
+    data.sizes = formData.sizes.length > 0 ? formData.sizes : null;
     if (editingId) {
       updateProduct(editingId, data);
     } else {
@@ -40,7 +41,21 @@ const ProductsPage = () => {
     }
     setShowForm(false);
     setEditingId(null);
-    setFormData({ name: '', description: '', price: '', categoryId: 1, available: true });
+    setFormData({ name: '', description: '', price: '', categoryId: 1, available: true, sizes: [] });
+  };
+
+  const addSize = () => {
+    setFormData({ ...formData, sizes: [...formData.sizes, { name: '', price: 0 }] });
+  };
+  const updateSize = (idx: number, field: 'name' | 'price', value: string) => {
+    const newSizes = [...formData.sizes];
+    if (field === 'price') newSizes[idx] = { ...newSizes[idx], price: Number(value) };
+    else newSizes[idx] = { ...newSizes[idx], name: value };
+    setFormData({ ...formData, sizes: newSizes, price: newSizes.length > 0 ? String(Math.min(...newSizes.map(s => s.price).filter(p => p > 0))) : formData.price });
+  };
+  const removeSize = (idx: number) => {
+    const newSizes = formData.sizes.filter((_, i) => i !== idx);
+    setFormData({ ...formData, sizes: newSizes, price: newSizes.length > 0 ? String(Math.min(...newSizes.map(s => s.price).filter(p => p > 0))) : formData.price });
   };
 
   return (
@@ -54,7 +69,7 @@ const ProductsPage = () => {
         <button onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')} className="w-10 h-10 rounded-lg border border-border bg-card flex items-center justify-center">
           {viewMode === 'grid' ? <List size={18} /> : <Grid3X3 size={18} />}
         </button>
-        <button onClick={() => { setEditingId(null); setFormData({ name: '', description: '', price: '', categoryId: 1, available: true }); setShowForm(true); }}
+        <button onClick={() => { setEditingId(null); setFormData({ name: '', description: '', price: '', categoryId: 1, available: true, sizes: [] }); setShowForm(true); }}
           className="h-10 px-4 rounded-lg gradient-primary text-primary-foreground text-sm font-semibold flex items-center gap-1.5 shadow-fab">
           <Plus size={16} /> Agregar
         </button>
@@ -189,10 +204,37 @@ const ProductsPage = () => {
                   <input value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })}
                     className="w-full px-4 py-2.5 rounded-lg border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-primary/20" />
                 </div>
+                {formData.sizes.length === 0 && (
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Precio</label>
+                    <input type="number" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-lg border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                  </div>
+                )}
+                {/* Sizes editor */}
                 <div>
-                  <label className="text-sm font-medium mb-1 block">Precio</label>
-                  <input type="number" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-lg border border-input bg-card text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-sm font-medium">Tamaños / Variantes</label>
+                    <button type="button" onClick={addSize} className="text-xs text-primary font-medium flex items-center gap-1">
+                      <Plus size={12} /> Agregar
+                    </button>
+                  </div>
+                  {formData.sizes.length === 0 ? (
+                    <p className="text-[10px] text-muted-foreground">Sin tamaños — precio único. Agrega tamaños si el producto tiene varias presentaciones.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {formData.sizes.map((s, i) => (
+                        <div key={i} className="flex gap-2 items-center">
+                          <input value={s.name} onChange={e => updateSize(i, 'name', e.target.value)} placeholder="Ej: Mediana"
+                            className="flex-1 px-3 py-2 rounded-lg border border-input bg-card text-sm outline-none" />
+                          <input type="number" value={s.price || ''} onChange={e => updateSize(i, 'price', e.target.value)} placeholder="Precio"
+                            className="w-24 px-3 py-2 rounded-lg border border-input bg-card text-sm outline-none font-display" />
+                          <button type="button" onClick={() => removeSize(i)} className="text-destructive shrink-0"><Trash2 size={14} /></button>
+                        </div>
+                      ))}
+                      <p className="text-[10px] text-muted-foreground">El precio base será el menor de los tamaños.</p>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="text-sm font-medium mb-1 block">Categoría</label>
