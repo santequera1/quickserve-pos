@@ -85,30 +85,27 @@ const CustomersPage = () => {
         <div className="space-y-2">
           {filtered.map(c => (
             <div key={c.id} onClick={() => navigate(`/customers/${c.id}`)}
-              className="w-full bg-card rounded-xl border border-border shadow-card p-4 text-left hover:shadow-elevated transition-shadow cursor-pointer">
-              <div className="flex items-center gap-3">
+              className="w-full bg-card rounded-xl border border-border shadow-card p-3 text-left hover:shadow-elevated transition-shadow cursor-pointer">
+              <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-lg font-display font-bold text-primary shrink-0">
                   {c.name[0]}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-display font-semibold text-sm">{c.name}</p>
-                    {c.tag === 'frequent' && <span className="px-2 py-0.5 rounded-full bg-warning/15 text-warning text-[10px] font-semibold">⭐ FRECUENTE</span>}
-                    {c.tag === 'new' && <span className="px-2 py-0.5 rounded-full bg-info/15 text-info text-[10px] font-semibold">🆕 NUEVO</span>}
+                  <div className="flex items-center gap-2">
+                    <p className="font-display font-semibold text-sm truncate">{c.name}</p>
+                    {c.tag === 'frequent' && <span className="px-1.5 py-0.5 rounded-full bg-warning/15 text-warning text-[9px] font-semibold shrink-0">⭐</span>}
+                    {c.tag === 'new' && <span className="px-1.5 py-0.5 rounded-full bg-info/15 text-info text-[9px] font-semibold shrink-0">🆕</span>}
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                    <span className="flex items-center gap-1"><Phone size={12} />{c.phone}</span>
-                    {c.address && <span className="flex items-center gap-1 truncate"><MapPin size={12} />{c.address}</span>}
-                  </div>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1"><Phone size={11} />{c.phone}</p>
                 </div>
-                <div className="shrink-0 flex items-center gap-1">
-                  <div className="mr-1 text-right">
-                    <p className="text-[10px] text-muted-foreground whitespace-nowrap">{plural(c.totalOrders, 'pedido')}</p>
-                    <p className="font-display font-semibold text-xs whitespace-nowrap">{formatPrice(c.totalSpent)}</p>
-                  </div>
+                <div className="text-right shrink-0">
+                  <p className="font-display font-semibold text-xs">{formatPrice(c.totalSpent)}</p>
+                  <p className="text-[10px] text-muted-foreground">{plural(c.totalOrders, 'pedido')}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 justify-end" onClick={e => e.stopPropagation()}>
                   {c.phone && (
                     <a href={`https://wa.me/57${c.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"
-                      onClick={e => e.stopPropagation()}
                       className="w-8 h-8 rounded-lg hover:bg-[#25D366]/10 flex items-center justify-center text-[#25D366] transition-colors">
                       <MessageCircle size={14} />
                     </a>
