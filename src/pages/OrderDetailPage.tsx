@@ -260,10 +260,10 @@ const OrderDetailPage = () => {
             return (
               <div key={step.status} className="flex-1 flex flex-col items-center relative">
                 {i > 0 && (
-                  <div className={cn('absolute top-3.5 h-0.5', isPast || isCurrent ? 'bg-primary' : 'bg-muted')}
-                    style={{ left: '-50%', width: '100%', zIndex: 0 }} />
+                  <div className={cn('absolute h-0.5 right-1/2 left-[-50%] top-[13px]', isPast || isCurrent ? 'bg-primary' : 'bg-muted')}
+                    style={{ zIndex: 0 }} />
                 )}
-                <div className={cn('w-7 h-7 rounded-full flex items-center justify-center text-xs z-10 relative',
+                <div className={cn('w-7 h-7 rounded-full flex items-center justify-center text-xs z-10 relative shrink-0',
                   isCancelled ? 'bg-muted' :
                   isCurrent ? 'bg-primary text-primary-foreground ring-2 ring-primary/30 ring-offset-1' :
                   isPast ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground')}>
