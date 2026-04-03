@@ -129,7 +129,7 @@ function seedIfEmpty() {
   // Users
   const hash = (pw) => bcrypt.hashSync(pw, 10);
   const insertUser = db.prepare('INSERT INTO users (username, password, name, role) VALUES (?, ?, ?, ?)');
-  insertUser.run('admin', hash('admin123'), 'Diógenes López', 'admin');
+  insertUser.run('diogenes', hash('3145843269'), 'Diógenes López', 'admin');
   insertUser.run('cajero', hash('cajero123'), 'Cajero', 'cashier');
   insertUser.run('cocina', hash('cocina123'), 'Cocina', 'kitchen');
 
@@ -143,6 +143,7 @@ function seedIfEmpty() {
     [5, 'Perros Calientes', '🌭', '#F59E0B'],
     [6, 'Hamburguesas', '🍔', '#EF4444'],
     [7, 'Salsas', '🫙', '#6B7280'],
+    [8, 'Bebidas', '🥤', '#3B82F6'],
   ];
   for (const c of cats) insertCat.run(...c);
 
@@ -208,6 +209,15 @@ function seedIfEmpty() {
     [38, 'Salsa BBQ', 7, 2000, '/products/salsa.png', null, null],
     [39, 'Salsa de Ajo', 7, 2000, '/products/salsa.png', null, null],
     [40, 'Salsa Ranch', 7, 2000, '/products/salsa.png', null, null],
+
+    // BEBIDAS (cat 8) - con tamaños
+    [41, 'Coca Cola', 8, 4000, null, null, JSON.stringify([{name:'Personal',price:4000},{name:'Litro',price:7000},{name:'2 Litros',price:10000}])],
+    [42, 'Pepsi', 8, 4000, null, null, JSON.stringify([{name:'Personal',price:4000},{name:'Litro',price:7000},{name:'2 Litros',price:10000}])],
+    [43, 'Postobón Manzana', 8, 4000, null, null, JSON.stringify([{name:'Personal',price:4000},{name:'Litro',price:7000},{name:'2 Litros',price:10000}])],
+    [44, 'Postobón Uva', 8, 4000, null, null, JSON.stringify([{name:'Personal',price:4000},{name:'Litro',price:7000},{name:'2 Litros',price:10000}])],
+    [45, 'Colombiana', 8, 4000, null, null, JSON.stringify([{name:'Personal',price:4000},{name:'Litro',price:7000},{name:'2 Litros',price:10000}])],
+    [46, 'Sprite', 8, 4000, null, null, JSON.stringify([{name:'Personal',price:4000},{name:'Litro',price:7000},{name:'2 Litros',price:10000}])],
+    [47, 'Agua', 8, 3000, null, null, null],
   ];
   for (const p of prods) insertProd.run(...p);
 

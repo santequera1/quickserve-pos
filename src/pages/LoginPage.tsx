@@ -92,20 +92,6 @@ const LoginPage = () => {
             </button>
           </form>
 
-          <div className="mt-6 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-            <p className="text-[10px] text-center mb-2" style={{ color: 'rgba(255,255,255,0.4)' }}>Accesos rápidos de prueba:</p>
-            <div className="flex gap-2">
-              {[
-                { u: 'admin', p: 'admin123', label: '👑 Admin' },
-              ].map(({ u, p, label }) => (
-                <button key={u} onClick={() => { setUsername(u); setPassword(p); }}
-                  className="flex-1 py-1.5 rounded-md text-[11px] font-medium transition-all hover:opacity-80"
-                  style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
         <p className="text-center text-[11px] mt-4" style={{ color: 'rgba(255,255,255,0.3)' }}>
