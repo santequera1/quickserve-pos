@@ -170,7 +170,7 @@ const OrderDetailPage = () => {
     const padding = 20;
 
     const lines: string[] = [];
-    lines.push('Comidas Rápidas Las Gaviotas');
+    lines.push('Pizza Pizza Fast Food');
     lines.push('Recibo de Pedido');
     lines.push('─'.repeat(35));
     lines.push(`Pedido # ${order.id}`);
@@ -546,7 +546,7 @@ const OrderDetailPage = () => {
       {/* Printable receipt (hidden) */}
       <div className="hidden">
         <div ref={receiptRef}>
-          <h2>Comidas Rápidas Las Gaviotas</h2>
+          <h2>Pizza Pizza Fast Food</h2>
           <p className="center">Recibo de Pedido</p>
           <div className="line"></div>
           <p><b>Pedido #</b>{order.id}</p>

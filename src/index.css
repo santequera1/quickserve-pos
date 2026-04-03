@@ -15,16 +15,16 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 239 84% 67%;
+    --primary: 0 79% 40%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 226 100% 94%;
-    --secondary-foreground: 239 84% 67%;
+    --secondary: 0 60% 94%;
+    --secondary-foreground: 0 79% 40%;
 
     --muted: 220 14% 96%;
     --muted-foreground: 220 9% 46%;
 
-    --accent: 239 84% 67%;
+    --accent: 0 79% 40%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
@@ -32,16 +32,16 @@
 
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 239 84% 67%;
+    --ring: 0 79% 40%;
 
     --radius: 0.75rem;
 
-    /* Brand */
-    --indigo-600: 239 84% 67%;
-    --indigo-500: 239 84% 67%;
-    --indigo-400: 232 92% 75%;
-    --indigo-100: 226 100% 94%;
-    --indigo-950: 244 52% 20%;
+    /* Brand - Pizza Pizza */
+    --brand-red: 0 79% 40%;
+    --brand-brown: 18 73% 13%;
+    --brand-orange: 27 90% 44%;
+    --brand-yellow: 45 92% 53%;
+    --brand-warm: 30 33% 95%;
 
     /* Semantic */
     --success: 160 84% 39%;
@@ -68,19 +68,19 @@
     /* Shadows */
     --shadow-card: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
     --shadow-elevated: 0 4px 12px rgba(0,0,0,0.1);
-    --shadow-fab: 0 8px 25px rgba(79,70,229,0.4);
+    --shadow-fab: 0 8px 25px rgba(183,21,21,0.35);
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(239 84% 67%), hsl(239 84% 72%));
+    --gradient-primary: linear-gradient(135deg, hsl(0 79% 40%), hsl(0 79% 48%));
 
-    --sidebar-background: 244 52% 20%;
+    --sidebar-background: 18 73% 13%;
     --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 239 84% 67%;
+    --sidebar-primary: 0 79% 40%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 244 52% 28%;
+    --sidebar-accent: 18 60% 20%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 244 52% 28%;
-    --sidebar-ring: 239 84% 67%;
+    --sidebar-border: 18 60% 20%;
+    --sidebar-ring: 0 79% 40%;
   }
 }
 

@@ -22,7 +22,7 @@ const SettingsPage = () => {
 
   useEffect(() => {
     api.getSettings().then(s => {
-      setBusinessName(s.businessName || 'Las Gaviotas');
+      setBusinessName(s.businessName || 'Pizza Pizza Fast Food');
       setBusinessPhone(s.businessPhone || '');
       setBusinessAddress(s.businessAddress || '');
       setEditDeliveryFee(String(s.deliveryFee || deliveryFee));
@@ -190,7 +190,7 @@ const SettingsPage = () => {
         {saved ? <><Check size={16} /> Guardado</> : loading ? 'Guardando...' : <><Save size={16} /> Guardar configuración</>}
       </button>
 
-      <p className="text-center text-xs text-muted-foreground">{businessName || 'Las Gaviotas'} POS v1.0</p>
+      <p className="text-center text-xs text-muted-foreground">{businessName || 'Pizza Pizza Fast Food'} POS v1.0</p>
     </div>
   );
 };

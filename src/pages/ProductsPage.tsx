@@ -112,9 +112,13 @@ const ProductsPage = () => {
             const cat = categories.find(c => c.id === p.categoryId);
             return (
               <div key={p.id} className={cn('bg-card rounded-xl border border-border shadow-card p-3', !p.available && 'opacity-50')}>
-                <div className="w-full h-16 rounded-lg mb-2 flex items-center justify-center text-3xl" style={{ backgroundColor: (cat?.color || '#6B7280') + '15' }}>
-                  {cat?.emoji}
-                </div>
+                {p.image ? (
+                  <img src={p.image} alt={p.name} className="w-full h-20 rounded-lg mb-2 object-cover" />
+                ) : (
+                  <div className="w-full h-16 rounded-lg mb-2 flex items-center justify-center text-3xl" style={{ backgroundColor: (cat?.color || '#6B7280') + '15' }}>
+                    {cat?.emoji}
+                  </div>
+                )}
                 <p className="text-xs font-medium truncate">{p.name}</p>
                 <p className="text-sm font-display font-bold text-primary">{formatPrice(p.price)}</p>
                 <div className="flex items-center justify-between mt-2">
@@ -138,9 +142,13 @@ const ProductsPage = () => {
             const cat = categories.find(c => c.id === p.categoryId);
             return (
               <div key={p.id} className={cn('bg-card rounded-xl border border-border shadow-card p-3 flex items-center gap-3', !p.available && 'opacity-50')}>
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-xl shrink-0" style={{ backgroundColor: (cat?.color || '#6B7280') + '15' }}>
-                  {cat?.emoji}
-                </div>
+                {p.image ? (
+                  <img src={p.image} alt={p.name} className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                ) : (
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center text-xl shrink-0" style={{ backgroundColor: (cat?.color || '#6B7280') + '15' }}>
+                    {cat?.emoji}
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{p.name}</p>
                   <p className="text-xs text-muted-foreground">{cat?.name}</p>

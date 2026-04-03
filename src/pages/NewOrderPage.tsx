@@ -9,9 +9,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 type Step = 'type' | 'customer' | 'products' | 'summary';
 
 const transferAccounts = [
-  { label: 'Bancolombia', detail: '67800007198 - Ahorro', icon: '🏦' },
-  { label: 'Nequi', detail: '3142211678', icon: '💜' },
-  { label: 'Daviplata', detail: '3142211678', icon: '🔴' },
+  { label: 'Nequi', detail: '3145843269', icon: '💜' },
+  { label: 'Daviplata', detail: '3145843269', icon: '🔴' },
+  { label: 'Bancolombia', detail: '3145843269', icon: '🏦' },
 ];
 
 const getDriverDisplayName = (d: Driver) => {
@@ -403,9 +403,13 @@ const NewOrderPage = () => {
                 return (
                   <button key={p.id} onClick={() => { setShowProductModal(p.id); setModalQty(1); setModalNotes(''); }}
                     className="bg-card rounded-xl p-3 border border-border shadow-card text-left hover:shadow-elevated transition-shadow relative">
-                    <div className="w-full h-16 rounded-lg mb-2 flex items-center justify-center text-3xl" style={{ backgroundColor: categories.find(c => c.id === p.categoryId)?.color + '15' }}>
-                      {categories.find(c => c.id === p.categoryId)?.emoji}
-                    </div>
+                    {p.image ? (
+                      <img src={p.image} alt={p.name} className="w-full h-20 rounded-lg mb-2 object-cover" />
+                    ) : (
+                      <div className="w-full h-16 rounded-lg mb-2 flex items-center justify-center text-3xl" style={{ backgroundColor: categories.find(c => c.id === p.categoryId)?.color + '15' }}>
+                        {categories.find(c => c.id === p.categoryId)?.emoji}
+                      </div>
+                    )}
                     <p className="text-xs font-medium truncate">{p.name}</p>
                     <p className="text-sm font-display font-bold text-primary">{formatPrice(p.price)}</p>
                     {inCart && (

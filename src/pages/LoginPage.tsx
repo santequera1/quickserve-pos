@@ -26,13 +26,13 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden" style={{ background: 'hsl(244 52% 20%)' }}>
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden" style={{ background: '#3B1A08' }}>
       {/* Animated particles */}
       {Array.from({ length: 8 }).map((_, i) => (
         <div key={i} className="absolute rounded-full opacity-20 animate-float"
           style={{
             width: `${12 + i * 8}px`, height: `${12 + i * 8}px`,
-            background: `hsl(${239 + i * 10} 84% ${60 + i * 4}%)`,
+            background: i % 2 === 0 ? '#B71515' : '#D4620A',
             left: `${10 + i * 12}%`, top: `${15 + (i % 3) * 25}%`,
             animationDelay: `${i * 0.8}s`, animationDuration: `${5 + i}s`,
           }}
@@ -42,8 +42,8 @@ const LoginPage = () => {
       <div className="w-full max-w-sm relative z-10">
         <div className="rounded-2xl p-8 backdrop-blur-xl" style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}>
           <div className="text-center mb-8">
-            <img src="/logo.webp" alt="Las Gaviotas" className="w-28 h-28 mx-auto mb-3 rounded-2xl object-contain" />
-            <h1 className="font-display text-2xl font-bold" style={{ color: 'white' }}>Las Gaviotas</h1>
+            <img src="/logo.png" alt="Pizza Pizza" className="w-28 h-28 mx-auto mb-3 rounded-2xl object-contain" />
+            <h1 className="font-display text-2xl font-bold" style={{ color: 'white' }}>Pizza Pizza</h1>
             <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.6)' }}>Sistema de pedidos</p>
           </div>
 

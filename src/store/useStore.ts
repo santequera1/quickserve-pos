@@ -142,8 +142,8 @@ export const useStore = create<AppState>((set, get) => ({
   orders: [],
   drivers: [],
   deliveryFee: 5000,
-  tableCount: 8,
-  businessName: 'Las Gaviotas',
+  tableCount: 6,
+  businessName: 'Pizza Pizza Fast Food',
   initialized: false,
   sidebarCollapsed: false,
 
@@ -210,7 +210,7 @@ export const useStore = create<AppState>((set, get) => ({
         drivers,
         deliveryFee: settings.deliveryFee || 5000,
         tableCount: settings.tableCount || 8,
-        businessName: settings.businessName || 'Las Gaviotas',
+        businessName: settings.businessName || 'Pizza Pizza Fast Food',
         initialized: true,
       });
     } catch (err) {
