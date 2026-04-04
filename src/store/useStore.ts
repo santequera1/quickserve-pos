@@ -182,8 +182,10 @@ export const useStore = create<AppState>((set, get) => ({
       return;
     }
     try {
-      // Decode JWT payload (base64)
-      const payload = JSON.parse(atob(token.split('.')[1]));
+      // Decode JWT payload (base64 with UTF-8 support)
+      const b64 = token.split('.')[1];
+      const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+      const payload = JSON.parse(new TextDecoder().decode(bytes));
       // Check if token is expired
       if (payload.exp && payload.exp * 1000 < Date.now()) {
         setToken(null);

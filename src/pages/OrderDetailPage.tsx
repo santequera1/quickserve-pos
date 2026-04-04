@@ -252,30 +252,42 @@ const OrderDetailPage = () => {
 
       {/* Progress flow */}
       <div className="bg-card rounded-xl border border-border p-4 shadow-card">
-        <div className="flex items-center justify-between mb-4">
-          {flowSteps.map((step, i) => {
-            const isCurrent = step.status === order.status;
-            const isPast = currentStepIdx >= 0 && i < currentStepIdx;
-            const isCancelled = order.status === 'cancelled';
-            return (
-              <div key={step.status} className="flex-1 flex flex-col items-center relative">
-                {i > 0 && (
-                  <div className={cn('absolute h-0.5 right-1/2 left-[-50%] top-[13px]', isPast || isCurrent ? 'bg-primary' : 'bg-muted')}
-                    style={{ zIndex: 0 }} />
-                )}
-                <div className={cn('w-7 h-7 rounded-full flex items-center justify-center text-xs z-10 relative shrink-0',
-                  isCancelled ? 'bg-muted' :
-                  isCurrent ? 'bg-primary text-primary-foreground ring-2 ring-primary/30 ring-offset-1' :
-                  isPast ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground')}>
-                  {isPast ? '✓' : step.emoji}
+        <div className="mb-4">
+          {/* Circles row with connecting lines */}
+          <div className="flex items-center mb-2">
+            {flowSteps.map((step, i) => {
+              const isCurrent = step.status === order.status;
+              const isPast = currentStepIdx >= 0 && i < currentStepIdx;
+              const isCancelled = order.status === 'cancelled';
+              return (
+                <div key={step.status} className="flex items-center flex-1 last:flex-none">
+                  <div className={cn('w-7 h-7 rounded-full flex items-center justify-center text-xs shrink-0',
+                    isCancelled ? 'bg-muted' :
+                    isCurrent ? 'bg-primary text-primary-foreground ring-2 ring-primary/30 ring-offset-1' :
+                    isPast ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground')}>
+                    {isPast ? '✓' : step.emoji}
+                  </div>
+                  {i < flowSteps.length - 1 && (
+                    <div className={cn('flex-1 h-0.5 mx-1', isPast ? 'bg-primary' : 'bg-muted')} />
+                  )}
                 </div>
-                <span className={cn('text-[9px] mt-1.5 text-center leading-tight max-w-[70px]',
-                  isCurrent ? 'text-primary font-bold' : 'text-muted-foreground')}>
-                  {step.label}
-                </span>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+          {/* Labels row */}
+          <div className="flex">
+            {flowSteps.map((step, i) => {
+              const isCurrent = step.status === order.status;
+              return (
+                <div key={step.status} className={cn('text-center', i < flowSteps.length - 1 ? 'flex-1' : 'w-7')} >
+                  <span className={cn('text-[9px] leading-tight block',
+                    isCurrent ? 'text-primary font-bold' : 'text-muted-foreground')}>
+                    {step.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Main action */}
